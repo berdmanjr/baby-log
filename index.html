@@ -1,0 +1,1071 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Baby Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Baby Log</title>
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-column phone app. Sticky header, scrolling view, fixed bottom tabs, bottom-sheet forms. */
+:root{
+  --bg:#F2F4F3; --surface:#FFFFFF; --surface-2:#E7ECEA; --ink:#17201E; --muted:#5A6864; --line:#D6DDDA;
+  --accent:#2E4F8F; --accent-ink:#FFFFFF; --danger:#B3261E; --warn-bg:#FFF4D6; --warn-ink:#6B4E00;
+  --diaper:#B47D14; --feed:#2C77B8; --pump:#7E55B8; --sleep:#3B4A9A; --tummy:#2F8A5C; --visit:#B8455F; --growth:#16807F;
+  --wet:#3C8DD3; --dirty:#8F5E2E; --formula:#79B4DF;
+  --f-display:"Bricolage Grotesque", ui-rounded, system-ui, sans-serif;
+  --f-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:14px; --tabh:62px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#171F1D; --surface-2:#212B28; --ink:#E6EDEA; --muted:#9AA8A4; --line:#2C3834;
+  --accent:#8FB0F0; --accent-ink:#0E1412; --danger:#F2867E; --warn-bg:#3A3018; --warn-ink:#F3D58A;
+  --diaper:#E0B04D; --feed:#6AAEE8; --pump:#B595E6; --sleep:#9AA6F0; --tummy:#6CCB97; --visit:#EE8AA1; --growth:#5CC9C6;
+  --wet:#6FB2EE; --dirty:#C8955F; --formula:#A9D3F2; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#171F1D; --surface-2:#212B28; --ink:#E6EDEA; --muted:#9AA8A4; --line:#2C3834;
+  --accent:#8FB0F0; --accent-ink:#0E1412; --danger:#F2867E; --warn-bg:#3A3018; --warn-ink:#F3D58A;
+  --diaper:#E0B04D; --feed:#6AAEE8; --pump:#B595E6; --sleep:#9AA6F0; --tummy:#6CCB97; --visit:#EE8AA1; --growth:#5CC9C6;
+  --wet:#6FB2EE; --dirty:#C8955F; --formula:#A9D3F2; color-scheme:dark;
+}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+body{margin:0}
+[hidden]{display:none!important}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px 8px}
+.who{flex:1;min-width:0}
+.who h1{font-family:var(--f-display);font-size:24px;line-height:1.1;margin:0;letter-spacing:-.01em}
+.who p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.iconbtn svg{width:20px;height:20px}
+svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.banner{margin:4px 0 8px;padding:10px 12px;border-radius:12px;background:var(--warn-bg);color:var(--warn-ink);font-size:13.5px}
+main{padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 24px)}
+section.view{display:flex;flex-direction:column;gap:14px;padding-top:4px}
+h2{font-family:var(--f-display);font-size:18px;margin:0;letter-spacing:-.005em}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+
+/* status strip */
+.status{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 10px;min-width:0}
+.stat .k{font-size:11.5px;color:var(--muted);font-weight:500}
+.stat .v{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timers{display:flex;flex-direction:column;gap:8px}
+.timer{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--c) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 40%,var(--line))}
+.timer .t{flex:1;min-width:0;font-weight:600}
+.timer .el{font-family:var(--f-display);font-size:20px}
+.timer button{border:0;border-radius:10px;padding:8px 12px;background:var(--c);color:var(--surface);font-weight:600}
+
+/* quick add */
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.qa{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;border-radius:14px;border:1px solid color-mix(in srgb,var(--c) 30%,var(--line));background:color-mix(in srgb,var(--c) 9%,var(--surface));font-size:12.5px;font-weight:600;color:var(--ink)}
+.qa .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--c);color:var(--surface)}
+.qa .ic svg{width:22px;height:22px}
+.qa:active{transform:scale(.97)}
+.qa[disabled]{opacity:.45}
+
+/* day nav + list */
+.daynav{display:flex;align-items:center;gap:8px}
+.daynav .lbl{flex:1;text-align:center}
+.daynav .lbl b{display:block;font-family:var(--f-display);font-size:17px}
+.daynav .lbl span{font-size:12.5px;color:var(--muted)}
+.navbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1}
+.navbtn[disabled]{opacity:.35}
+.daysum{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:12.5px;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink);white-space:nowrap}
+.pill b{font-weight:600}
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:flex;gap:12px;align-items:flex-start;padding:11px 12px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;width:100%}
+.row:first-child{border-top:0}
+.row .dot{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 16%,var(--surface));color:var(--c)}
+.row .dot svg{width:18px;height:18px}
+.row .main{flex:1;min-width:0}
+.row .ttl{font-weight:600}
+.row .sub{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.row .when{flex:none;text-align:right;font-weight:600;font-size:14px}
+.empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:14px}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .wrap{display:grid;grid-template-columns:repeat(3,1fr);height:var(--tabh)}
+.tab{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted)}
+.tab svg{width:22px;height:22px}
+.tab[aria-current="page"]{color:var(--accent)}
+
+/* segmented */
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface-2);border-radius:11px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;border-radius:8px;padding:7px 12px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .12)}
+
+/* trends */
+.trendbar{display:flex;flex-direction:column;gap:10px}
+.chart{display:flex;flex-direction:column;gap:8px}
+.chart .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.chart .hd .avg{font-size:12.5px;color:var(--muted)}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart svg text{fill:var(--muted);font-family:var(--f-body);font-size:10px}
+.chart svg text.val{fill:var(--ink);font-weight:600}
+.chart svg .grid{stroke:var(--line);stroke-width:1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.tile .k{font-size:12px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:6px}
+.tile .k i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.tile .v{font-family:var(--f-display);font-size:22px;line-height:1.2}
+.tile .s{font-size:12px;color:var(--muted)}
+
+/* visit summary */
+.vsum{padding:12px 14px}
+.vsum .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.vsum .h h2{font-size:17px}
+.vsum .asof{font-size:11.5px;color:var(--muted)}
+.vsum .baby{font-size:13px;color:var(--muted);margin-top:1px}
+.vsum .growth{margin-top:6px;display:flex;flex-direction:column;gap:0;font-size:13.5px}
+.vsum .growth b{font-weight:600}
+.vsum .growth .sm{font-size:12px;color:var(--muted)}
+.vtable{width:100%;border-collapse:collapse;margin-top:4px;font-size:13.5px}
+.vtable th{font-size:11px;font-weight:600;color:var(--muted);text-align:right;padding:2px 0 1px}
+.vtable th:first-child{text-align:left}
+.vtable td{padding:2px 0;border-top:1px solid var(--line);text-align:right;white-space:nowrap}
+body.v-visit .top{display:none}
+.vtable td:first-child{text-align:left;white-space:normal;color:var(--ink)}
+.vtable td:nth-child(2){font-weight:600;padding-left:8px}
+.vtable td:nth-child(3){padding-left:8px;color:var(--muted)}
+.vtable tr.sec td{border-top:0;padding-top:5px;padding-bottom:0;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--c,var(--muted))}
+.vtable .sm{font-size:11.5px;color:var(--muted);font-weight:400}
+.qlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.qlist li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+.qlist li:first-child{border-top:0}
+.qlist button.ck{flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;padding:0}
+.qlist button.ck svg{width:14px;height:14px;opacity:0}
+.qlist li.done button.ck{background:var(--tummy);border-color:var(--tummy);color:var(--surface)}
+.qlist li.done button.ck svg{opacity:1}
+.qlist li.done span{text-decoration:line-through;color:var(--muted)}
+.addq{display:flex;gap:8px;margin-top:8px}
+.addq input{flex:1;min-width:0}
+
+/* buttons, forms */
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:600;background:var(--accent);color:var(--accent-ink);font-size:15px}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 40%,var(--line))}
+.btn.danger.arm{background:var(--danger);color:var(--surface)}
+.btn[disabled]{opacity:.45}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:600;padding:4px 0;font-size:14px}
+input[type=text],input[type=password],input[type=number],input[type=date],input[type=datetime-local],textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:70px}
+.backdrop{position:fixed;inset:0;z-index:40;background:rgb(10 14 13 / .45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:calc(100% - env(safe-area-inset-top,0px) - 24px);overflow:auto;background:var(--bg);border-radius:20px 20px 0 0;padding:8px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:2px auto 10px}
+.sheet .sh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sheet .sh .dot{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--c);color:var(--surface)}
+.sheet .sh .dot svg{width:20px;height:20px}
+.sheet .sh h2{flex:1;font-size:20px}
+form.f{display:flex;flex-direction:column;gap:14px}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fld > span,.fld > label{font-size:13px;font-weight:600;color:var(--muted)}
+.fld .hint{font-size:12px;color:var(--muted);font-weight:400}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.numrow{display:flex;align-items:center;gap:8px}
+.numrow input{text-align:center;font-weight:600;font-size:20px;padding:8px}
+.numrow .unit{font-weight:600;color:var(--muted);min-width:28px}
+.step{flex:none;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:22px;line-height:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:var(--surface)}
+.toggle2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tbig{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 10px;font-weight:600;font-size:17px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tbig small{font-weight:500;font-size:12px;color:var(--muted)}
+.tbig[aria-pressed="true"]{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,var(--surface))}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.actions .btn{flex:1}
+.err{color:var(--danger);font-size:13.5px;font-weight:500}
+.meta{font-size:12px;color:var(--muted)}
+.timerline{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px}
+.timerline span{flex:1;font-size:13.5px;color:var(--muted)}
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(24px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+.gate form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px}
+.gate .mark{width:56px;height:56px;border-radius:16px;background:var(--sleep);color:var(--surface);display:grid;place-items:center}
+.gate .mark svg{width:30px;height:30px}
+.gate h1{font-family:var(--f-display);font-size:28px;margin:0;letter-spacing:-.01em}
+.gate p{margin:0;color:var(--muted);font-size:14.5px}
+.toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:999px;font-weight:600;font-size:14px;max-width:calc(100% - 32px)}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" hidden>
+  <form id="gateForm" novalidate>
+    <div class="mark"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></div>
+    <h1>Baby Log</h1>
+    <p>Enter the family passcode. You only need to do this once on each phone.</p>
+    <input type="text" id="g-user" name="username" autocomplete="username" value="" hidden>
+    <div class="fld"><label for="g-pass">Family passcode</label><input type="password" id="g-pass" name="password" autocomplete="current-password" required></div>
+    <div class="fld"><label for="g-who">Your name <span class="hint">shown next to what you log</span></label><input type="text" id="g-who" autocomplete="given-name"></div>
+    <div class="err" id="gateErr" hidden></div>
+    <button class="btn" id="gateBtn">Open the log</button>
+  </form>
+</div>
+
+<header class="top"><div class="wrap">
+  <div class="who"><h1 id="babyName">&nbsp;</h1><p id="babyAge">&nbsp;</p></div>
+  <button class="iconbtn" id="btnSettings" aria-label="Settings"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h9M18 6h2M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15.5" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg></button>
+</div></header>
+
+<main class="wrap">
+  <div id="banner" class="banner" hidden></div>
+  <section class="view" id="view-today"></section>
+  <section class="view" id="view-trends" hidden></section>
+  <section class="view" id="view-visit" hidden></section>
+</main>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap">
+  <button class="tab" data-view="today"><svg class="i" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Log</button>
+  <button class="tab" data-view="trends"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Trends</button>
+  <button class="tab" data-view="visit"><svg class="i" viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="11" r="2"/></svg>Pediatrician</button>
+</div></nav>
+
+<div id="sheetRoot"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script>
+(() => {
+"use strict";
+/* Supabase connection. The publishable key is meant to be public; the
+   database only lets the one family login read or write (see setup.sql). */
+const SUPABASE_URL = 'https://ycxbdsijvmzzjbhvjaml.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_W6ACICEPaabN_aMJ4YSsCA_9eakz42F';
+const LOGIN_EMAIL = 'parents@baby-log.local';
+const MIN = 60000, HOUR = 3600000, DAY = 86400000, ML_PER_OZ = 29.5735, G_PER_OZ = 28.3495, CM_PER_IN = 2.54;
+
+/* ---------- icons ---------- */
+const IC = {
+  diaper:'<path d="M3 7h18v2.5a9 9 0 0 1-18 0z"/><path d="M8.5 7v2.5a3.5 3.5 0 0 0 7 0V7"/>',
+  feed:'<path d="M10 2.5h4v2.5h-4z"/><path d="M9 5h6l1 4v10a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3V9z"/><path d="M8.5 13h7"/>',
+  pump:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9.5 15a2.5 2.5 0 0 0 2.5 2.5"/>',
+  sleep:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  tummy:'<circle cx="7" cy="10" r="2.6"/><path d="M10 13.5h9.5M2.5 18h19"/><path d="M10 13.5l3-3"/>',
+  visit:'<path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="11" r="2"/>',
+  growth:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7.5 10a5 5 0 0 1 9 0"/><path d="M12 10l1.8-2"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>'
+};
+const icon = k => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
+const TYPES = {
+  diaper:{label:'Diaper', c:'--diaper'}, feed:{label:'Feed', c:'--feed'}, sleep:{label:'Sleep', c:'--sleep'},
+  pump:{label:'Pump', c:'--pump'}, tummy:{label:'Tummy time', c:'--tummy'}, growth:{label:'Growth', c:'--growth'},
+  visit:{label:'Pediatrician', c:'--visit'}
+};
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sod = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+const addDays = (t, n) => { const d = new Date(t); d.setDate(d.getDate() + n); return d.getTime(); };
+const pad = n => String(n).padStart(2, '0');
+const monthKey = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+const prevMonth = k => { let [y, m] = k.split('-').map(Number); m--; if (m < 1) { m = 12; y--; } return y + '-' + pad(m); };
+const toLocalInput = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fromLocalInput = s => { const t = new Date(s).getTime(); return Number.isFinite(t) ? t : null; };
+const fmtTime = t => new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+const fmtDate = (t, o = {weekday:'short', month:'short', day:'numeric'}) => new Date(t).toLocaleDateString([], o);
+const fmtDur = m => { if (m == null || !isFinite(m)) return '—'; m = Math.round(m); const h = Math.floor(m / 60), mm = m % 60; return h ? (mm ? `${h}h ${mm}m` : `${h}h`) : `${mm}m`; };
+const fmtAgo = t => { const m = Math.max(0, Math.round((Date.now() - t) / MIN)); if (m < 1) return 'just now'; if (m >= 48 * 60) return `${Math.round(m / 1440)} days ago`; if (m >= 24 * 60) return `${Math.floor(m / 1440)}d ${Math.floor((m % 1440) / 60)}h ago`; return fmtDur(m) + ' ago'; };
+const r1 = x => Math.round(x * 10) / 10;
+const fmtN = (x, d = 1) => x == null || !isFinite(x) ? '—' : String(Math.round(x * 10 ** d) / 10 ** d);
+const uid = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+const lsGet = k => { try { return localStorage.getItem('lucaslog:' + k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem('lucaslog:' + k, v); } catch {} };
+
+const U = { vol: lsGet('vol') || 'oz', wt: lsGet('wt') || 'imperial' };
+const volUnit = () => U.vol;
+const fmtVol = ml => ml == null || !isFinite(ml) ? '—' : U.vol === 'oz' ? `${fmtN(ml / ML_PER_OZ)} oz` : `${Math.round(ml)} ml`;
+const volToMl = v => U.vol === 'oz' ? v * ML_PER_OZ : v;
+const mlToVol = ml => U.vol === 'oz' ? Math.round(ml / ML_PER_OZ * 100) / 100 : Math.round(ml);
+const fmtWeight = g => { if (!g) return '—'; if (U.wt === 'metric') return `${fmtN(g / 1000, 2)} kg`; const oz = g / G_PER_OZ; let lb = Math.floor(oz / 16), rem = r1(oz - lb * 16); if (rem >= 16) { lb++; rem = 0; } return `${lb} lb ${fmtN(rem)} oz`; };
+const fmtLen = cm => !cm ? '—' : U.wt === 'metric' ? `${fmtN(cm)} cm` : `${fmtN(cm / CM_PER_IN, 1)} in`;
+
+/* ---------- state ---------- */
+const S = {
+  view: 'today', day: sod(Date.now()), trendMode: 'week', trendEnd: sod(Date.now()), trendDay: sod(Date.now()),
+  buckets: {}, months: new Set(), visits: [], growth: [], settings: {}, timers: {},
+  mode: 'loading', me: lsGet('who') || null, loadedOnce: false, slow: false
+};
+let store = null, sb = null, eventsCache = null, started = false;
+
+function allEvents() {
+  if (eventsCache) return eventsCache;
+  const out = [];
+  for (const k in S.buckets) out.push(...S.buckets[k]);
+  out.sort((a, b) => a.at - b.at);
+  return (eventsCache = out);
+}
+
+/* ---------- stores ---------- */
+function dbStore(db) {
+  return {
+    kind: 'db',
+    sub(coll, cb, err) { return db.collection(coll).onSnapshot(s => cb(s.docs.map(d => ({...d.data(), id: d.id, _path: coll + '/' + d.id})), s.metadata), err); },
+    subDoc(path, cb, err) { return db.doc(path).onSnapshot(s => cb(s.exists ? s.data() : null, s.metadata), err); },
+    set: (p, d) => db.doc(p).set(d),
+    del: p => db.doc(p).delete()
+  };
+}
+function memStore() {
+  const docs = new Map(), subs = [];
+  const parent = p => p.split('/').slice(0, -1).join('/');
+  const deliver = s => {
+    if (s.doc) return s.cb(docs.has(s.path) ? structuredClone(docs.get(s.path)) : null, {fromCache:false});
+    const out = [];
+    for (const [p, d] of docs) if (parent(p) === s.path) out.push({...structuredClone(d), id: p.split('/').pop(), _path: p});
+    s.cb(out, {fromCache:false});
+  };
+  const emit = () => subs.forEach(deliver);
+  return {
+    kind: 'mem', docs,
+    sub(path, cb) { const s = {path, cb}; subs.push(s); setTimeout(() => deliver(s)); return () => {}; },
+    subDoc(path, cb) { const s = {path, cb, doc: true}; subs.push(s); setTimeout(() => deliver(s)); return () => {}; },
+    async set(p, d) { docs.set(p, structuredClone(d)); emit(); },
+    async del(p) { docs.delete(p); emit(); }
+  };
+}
+
+/* Supabase: one table of JSON documents keyed by path, same shape as above. */
+const parentOf = p => p.split('/').slice(0, -1).join('/');
+function supaStore(client) {
+  const subs = [];  // {coll, path?, cb}
+  const fail = error => { const e = new Error(error.message || 'Request failed'); e.code = isAuthErr(error) ? 'auth' : 'unavailable'; throw e; };
+  async function load(coll) {
+    const {data, error} = await client.from('docs').select('path,data').eq('coll', coll);
+    if (error) throw error;
+    return data;
+  }
+  async function refresh(coll) {
+    const mine = subs.filter(s => s.coll === coll); if (!mine.length) return;
+    try {
+      const rows = await load(coll);
+      for (const s of mine) {
+        if (s.path) { const r = rows.find(x => x.path === s.path); s.cb(r ? r.data : null); }
+        else s.cb(rows.map(r => ({...r.data, id: r.path.split('/').pop(), _path: r.path})));
+      }
+    } catch (error) { if (isAuthErr(error)) showGate(); else mine.forEach(s => s.err && s.err(error)); }
+  }
+  const refreshAll = () => [...new Set(subs.map(s => s.coll))].forEach(refresh);
+  client.channel('docs-changes')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'docs'}, payload => {
+      const row = payload.new && payload.new.path ? payload.new : payload.old;
+      if (row && row.path) refresh(row.coll || parentOf(row.path)); else refreshAll();
+    })
+    .subscribe(status => { if (status === 'SUBSCRIBED') refreshAll(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAll(); });
+  window.addEventListener('online', refreshAll);
+  return {
+    kind: 'supabase',
+    sub(coll, cb, err) { subs.push({coll, cb, err}); refresh(coll); return () => {}; },
+    subDoc(path, cb, err) { const coll = parentOf(path); subs.push({coll, path, cb, err}); refresh(coll); return () => {}; },
+    async set(path, data) {
+      const {error} = await client.from('docs').upsert({path, coll: parentOf(path), data, updated_at: new Date().toISOString()});
+      if (error) fail(error);
+      refresh(parentOf(path));
+    },
+    async del(path) {
+      const {error} = await client.from('docs').delete().eq('path', path);
+      if (error) fail(error);
+      refresh(parentOf(path));
+    }
+  };
+}
+const isAuthErr = e => !!e && (e.status === 401 || e.code === 'PGRST301' || e.code === 'PGRST303' || /jwt|not authenticated|permission denied|row-level security/i.test(e.message || ''));
+
+async function write(fn) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try { await fn(); return true; }
+    catch (e) {
+      const code = e && e.code;
+      if (code === 'auth') { showGate(); return false; }
+      if (code === 'unavailable' && attempt === 0) { await new Promise(r => setTimeout(r, 400 + Math.random() * 600)); continue; }
+      toast("Couldn't save. Check your connection and try again.");
+      return false;
+    }
+  }
+  return false;
+}
+
+/* ---------- subscriptions ---------- */
+function ensureMonth(k) {
+  if (S.months.has(k) || !store) return;
+  S.months.add(k);
+  store.sub(`m/${k}/events`, docs => {
+    S.buckets[k] = docs; eventsCache = null;
+    if (k === monthKey(Date.now())) { S.loadedOnce = true; S.slow = false; if (S.mode === 'loading') S.mode = 'live'; }
+    render();
+  }, onSubErr);
+}
+function ensureMonthsBack(t) { let k = monthKey(Date.now()); const stop = monthKey(t); for (let i = 0; i < 60; i++) { ensureMonth(k); if (k <= stop) break; k = prevMonth(k); } }
+function onSubErr(e) { if (e) { S.slow = true; } render(); }
+
+function start() {
+  if (started) return; started = true;
+  const now = Date.now();
+  ensureMonth(monthKey(now)); ensureMonth(prevMonth(monthKey(now)));
+  store.sub('visits', d => { S.visits = d.sort((a, b) => a.at - b.at); render(); }, onSubErr);
+  store.sub('growth', d => { S.growth = d.sort((a, b) => a.at - b.at); render(); }, onSubErr);
+  store.subDoc('settings/main', d => { S.settings = d || {}; render(); }, onSubErr);
+  store.subDoc('live/timers', d => { S.timers = d || {}; render(); }, onSubErr);
+  setTimeout(() => { if (!S.loadedOnce && S.mode !== 'unavailable') { S.slow = true; render(); } }, 10000);
+}
+
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+async function boot() {
+  route(); render();
+  const configured = !SUPABASE_URL.startsWith('REPLACE');
+  if (!configured || !window.supabase) {
+    if (isLocal) { store = memStore(); S.mode = 'preview'; seedPreview(store); S.settings = {}; start(); render(); return; }
+    S.mode = 'unavailable'; render(); return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth: {persistSession: true, autoRefreshToken: true}});
+  sb.auth.onAuthStateChange((event, session) => { if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) showGate(); });
+  const {data} = await sb.auth.getSession();
+  if (data && data.session) openLog(); else showGate();
+}
+function openLog() {
+  $('#gate').hidden = true;
+  if (!store) { store = supaStore(sb); }
+  start(); render();
+}
+function showGate() {
+  const g = $('#gate'); if (!g.hidden) return;
+  g.hidden = false; $('#g-user').value = LOGIN_EMAIL; $('#g-who').value = S.me || '';
+  $('#gateErr').hidden = true; setTimeout(() => $('#g-pass').focus(), 50);
+}
+async function signIn() {
+  const pass = $('#g-pass').value, who = $('#g-who').value.trim();
+  const err = m => { const e = $('#gateErr'); e.textContent = m; e.hidden = false; };
+  if (!pass) return err('Enter the family passcode.');
+  if (!who) return err('Enter your name, so entries show who logged them.');
+  $('#gateBtn').disabled = true;
+  const {error} = await sb.auth.signInWithPassword({email: LOGIN_EMAIL, password: pass});
+  $('#gateBtn').disabled = false;
+  if (error) return err(/invalid/i.test(error.message) ? "That passcode didn't work. Check it and try again." : "Couldn't reach the log. Check your connection and try again.");
+  S.me = who; lsSet('who', who); $('#g-pass').value = '';
+  openLog();
+}
+
+/* ---------- names (logged by) ---------- */
+function resolveNames() {}
+const byName = by => by && !/^u_/.test(by) ? ` by ${by === S.me ? 'you' : by}` : '';
+
+/* ---------- stats ---------- */
+function rangeStats(from, to) {
+  const st = {wet:0, dirty:0, diapers:0, feeds:0, bottleMl:0, formulaMl:0, bottleFeeds:0, formulaFeeds:0, breastMin:0, breastFeeds:0,
+    intervals:[], sleepMin:0, sleeps:0, longestSleep:0, tummyMin:0, tummies:0, pumpMl:0, pumps:0};
+  let prevFeed = null;
+  for (const e of allEvents()) {
+    if (e.type === 'feed') { if (prevFeed != null && e.at >= from && e.at < to) st.intervals.push((e.at - prevFeed) / MIN); prevFeed = e.at; }
+    if (e.type === 'sleep') {
+      const s = e.at, en = e.at + (e.minutes || 0) * MIN, ov = Math.min(en, to) - Math.max(s, from);
+      if (ov > 0) { st.sleepMin += ov / MIN; st.sleeps++; st.longestSleep = Math.max(st.longestSleep, e.minutes || 0); }
+      continue;
+    }
+    if (e.at < from || e.at >= to) continue;
+    if (e.type === 'diaper') { st.diapers++; if (e.wet) st.wet++; if (e.dirty) st.dirty++; }
+    else if (e.type === 'feed') {
+      st.feeds++;
+      if (e.method === 'breast') { st.breastFeeds++; st.breastMin += e.minutes || 0; }
+      else if (e.method === 'formula') { st.formulaFeeds++; st.formulaMl += e.ml || 0; }
+      else { st.bottleFeeds++; st.bottleMl += e.ml || 0; }
+    }
+    else if (e.type === 'pump') { st.pumps++; st.pumpMl += e.ml || 0; }
+    else if (e.type === 'tummy') { st.tummies++; st.tummyMin += e.minutes || 0; }
+  }
+  st.intakeMl = st.bottleMl + st.formulaMl;
+  st.avgInterval = st.intervals.length ? st.intervals.reduce((a, b) => a + b, 0) / st.intervals.length : null;
+  st.longestGap = st.intervals.length ? Math.max(...st.intervals) : null;
+  return st;
+}
+const lastOf = (pred) => { const ev = allEvents(); for (let i = ev.length - 1; i >= 0; i--) if (ev[i].at <= Date.now() + MIN && pred(ev[i])) return ev[i]; return null; };
+
+/* ---------- describing events ---------- */
+function describe(e) {
+  switch (e.type) {
+    case 'diaper': return {t: e.wet && e.dirty ? 'Wet + dirty diaper' : e.dirty ? 'Dirty diaper' : 'Wet diaper'};
+    case 'feed':
+      if (e.method === 'breast') return {t: `Breastfed · ${fmtDur(e.minutes)}`, s: e.side ? ({L:'Left side', R:'Right side', B:'Both sides'}[e.side]) : ''};
+      return {t: `${e.method === 'formula' ? 'Formula' : 'Bottle'} · ${fmtVol(e.ml)}`, s: e.method === 'formula' ? '' : 'Breast milk'};
+    case 'pump': return {t: `Pumped · ${fmtVol(e.ml)}`, s: e.minutes ? fmtDur(e.minutes) + ' session' : ''};
+    case 'sleep': return {t: `Slept · ${fmtDur(e.minutes)}`, s: `until ${fmtTime(e.at + (e.minutes || 0) * MIN)}`};
+    case 'tummy': return {t: `Tummy time · ${fmtDur(e.minutes)}`};
+    case 'growth': return {t: 'Growth check', s: [e.grams && fmtWeight(e.grams), e.cm && fmtLen(e.cm) + ' long', e.headCm && 'head ' + fmtLen(e.headCm)].filter(Boolean).join(' · ')};
+    case 'visit': return {t: 'Pediatrician visit', s: e.place || ''};
+  }
+  return {t: e.type};
+}
+
+/* ---------- rendering ---------- */
+function age() {
+  const b = S.settings.birth; if (!b) return '';
+  const bt = new Date(b + 'T00:00').getTime(); const days = Math.floor((sod(Date.now()) - bt) / DAY + 0.5);
+  if (!isFinite(days) || days < 0) return '';
+  if (days < 14) return `${days} day${days === 1 ? '' : 's'} old`;
+  if (days < 84) { const w = Math.floor(days / 7), d = days % 7; return `${w} weeks${d ? ` ${d} day${d === 1 ? '' : 's'}` : ''} old`; }
+  const bd = new Date(bt), now = new Date(); let m = (now.getFullYear() - bd.getFullYear()) * 12 + now.getMonth() - bd.getMonth(); if (now.getDate() < bd.getDate()) m--;
+  const anchor = new Date(bd); anchor.setMonth(bd.getMonth() + m); const w = Math.floor((sod(Date.now()) - anchor.getTime()) / (7 * DAY));
+  return `${m} months${w ? ` ${w} wk` : ''} old`;
+}
+const babyName = () => S.settings.name || 'Baby';
+
+function showBanner() {
+  const b = $('#banner'); let msg = '';
+  if (S.mode === 'preview') msg = 'Preview with sample data. Nothing here is saved.';
+  else if (S.mode === 'unavailable') msg = "This copy of the log isn't connected to its database yet.";
+  else if (S.slow) msg = "Can't reach the shared log right now. Check your connection; entries will appear once it reconnects.";
+  b.hidden = !msg; b.textContent = msg;
+}
+
+function render() {
+  $('#babyName').textContent = babyName();
+  $('#babyAge').textContent = age() || (S.settings.birth ? '' : 'Add a birth date in settings');
+  showBanner();
+  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.view === S.view ? 'page' : 'false'));
+  for (const v of ['today', 'trends', 'visit']) $('#view-' + v).hidden = v !== S.view;
+  document.body.classList.toggle('v-visit', S.view === 'visit');
+  if (S.view === 'today') renderToday(); else if (S.view === 'trends') renderTrends(); else renderVisit();
+}
+
+function timerHTML() {
+  const T = S.timers || {}; const out = [];
+  const defs = {sleep:['Sleeping', '--sleep'], breast:['Breastfeeding', '--feed'], tummy:['Tummy time', '--tummy']};
+  for (const k in defs) { const t = T[k]; if (!t || !t.start) continue;
+    out.push(`<div class="timer" style="--c:var(${defs[k][1]})"><div class="t">${defs[k][0]}<div class="meta">since ${fmtTime(t.start)}</div></div><span class="el num" data-since="${t.start}">${elapsed(t.start)}</span><button data-stop="${k}">Stop</button></div>`); }
+  return out.length ? `<div class="timers">${out.join('')}</div>` : '';
+}
+const elapsed = s => { const m = Math.max(0, Math.floor((Date.now() - s) / MIN)); return `${Math.floor(m / 60)}:${pad(m % 60)}`; };
+
+function renderToday() {
+  const el = $('#view-today');
+  const lf = lastOf(e => e.type === 'feed'), ld = lastOf(e => e.type === 'diaper'), ls = lastOf(e => e.type === 'sleep');
+  const lfD = lf ? describe(lf).t.split(' · ') : null;
+  const isToday = S.day === sod(Date.now());
+  const dayEvents = [...allEvents().filter(e => e.at >= S.day && e.at < addDays(S.day, 1)),
+    ...S.visits.filter(v => v.at >= S.day && v.at < addDays(S.day, 1)).map(v => ({...v, type:'visit'})),
+    ...S.growth.filter(g => g.at >= S.day && g.at < addDays(S.day, 1)).map(g => ({...g, type:'growth'}))].sort((a, b) => b.at - a.at);
+  const st = rangeStats(S.day, addDays(S.day, 1));
+  resolveNames([...new Set(dayEvents.map(e => e.by).filter(Boolean))]);
+  const dis = S.readOnly || S.mode === 'unavailable' ? 'disabled' : '';
+  const pills = [];
+  if (st.feeds) pills.push(`<span class="pill num"><b>${st.feeds}</b> feeds</span>`);
+  if (st.intakeMl) pills.push(`<span class="pill num"><b>${fmtVol(st.intakeMl)}</b> bottle/formula</span>`);
+  if (st.breastMin) pills.push(`<span class="pill num"><b>${fmtDur(st.breastMin)}</b> breast</span>`);
+  if (st.diapers) pills.push(`<span class="pill num"><b>${st.wet}</b> wet · <b>${st.dirty}</b> dirty</span>`);
+  if (st.sleepMin) pills.push(`<span class="pill num"><b>${fmtDur(st.sleepMin)}</b> sleep</span>`);
+  if (st.tummyMin) pills.push(`<span class="pill num"><b>${fmtDur(st.tummyMin)}</b> tummy</span>`);
+  if (st.pumpMl) pills.push(`<span class="pill num"><b>${fmtVol(st.pumpMl)}</b> pumped</span>`);
+
+  let listHTML;
+  if (!S.loadedOnce && S.mode !== 'unavailable') listHTML = `<div class="empty">Loading the log…</div>`;
+  else if (!dayEvents.length) listHTML = `<div class="empty">${isToday ? `Nothing logged yet today. Tap a button above to log ${esc(babyName())}'s first diaper, feed or nap.` : 'Nothing was logged this day.'}</div>`;
+  else listHTML = dayEvents.map(e => { const d = describe(e); const t = TYPES[e.type];
+    return `<button class="row" data-edit="${esc(e._path)}" data-type="${e.type}" style="--c:var(${t.c})"><span class="dot">${icon(e.type)}</span><span class="main"><span class="ttl">${esc(d.t)}</span>${d.s ? `<div class="sub">${esc(d.s)}</div>` : ''}${e.note ? `<div class="sub">“${esc(e.note)}”</div>` : ''}<div class="sub">Logged ${fmtDate(e.loggedAt, {month:'short', day:'numeric'})}, ${fmtTime(e.loggedAt)}${esc(byName(e.by))}</div></span><span class="when num">${fmtTime(e.at)}</span></button>`; }).join('');
+
+  el.innerHTML = `
+    ${timerHTML()}
+    <div class="status">
+      <div class="stat"><div class="k">Last feed</div><div class="v num">${lf ? fmtAgo(lf.at) : '—'}</div><div class="s">${lf ? esc(lfD.join(' ')) : 'none yet'}</div></div>
+      <div class="stat"><div class="k">Last diaper</div><div class="v num">${ld ? fmtAgo(ld.at) : '—'}</div><div class="s">${ld ? (ld.wet && ld.dirty ? 'wet + dirty' : ld.dirty ? 'dirty' : 'wet') : 'none yet'}</div></div>
+      <div class="stat"><div class="k">${S.timers && S.timers.sleep ? 'Asleep for' : 'Awake for'}</div><div class="v num">${S.timers && S.timers.sleep ? elapsed(S.timers.sleep.start).replace(':', 'h ') + 'm' : ls ? fmtAgo(ls.at + (ls.minutes || 0) * MIN).replace(' ago', '') : '—'}</div><div class="s">${ls ? 'last nap ' + fmtDur(ls.minutes) : 'no sleep logged'}</div></div>
+    </div>
+    <div class="quick">
+      ${['diaper','feed','sleep','pump','tummy','growth','visit'].map(k => `<button class="qa" data-add="${k}" style="--c:var(${TYPES[k].c})" ${dis}><span class="ic">${icon(k)}</span>${k === 'visit' ? 'Doctor' : TYPES[k].label}</button>`).join('')}
+      <button class="qa" data-goto="trends" style="--c:var(--accent)"><span class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>Trends</button>
+    </div>
+    <div class="daynav">
+      <button class="navbtn" data-day="-1" aria-label="Previous day">‹</button>
+      <div class="lbl"><b>${isToday ? 'Today' : S.day === addDays(sod(Date.now()), -1) ? 'Yesterday' : fmtDate(S.day, {weekday:'long'})}</b><span>${fmtDate(S.day, {month:'long', day:'numeric', year:'numeric'})}</span></div>
+      <button class="navbtn" data-day="1" aria-label="Next day" ${isToday ? 'disabled' : ''}>›</button>
+    </div>
+    ${pills.length ? `<div class="daysum">${pills.join('')}</div>` : ''}
+    <div class="list">${listHTML}</div>`;
+}
+
+/* ---------- charts ---------- */
+function niceMax(v) { if (v <= 0) return 1; const p = 10 ** Math.floor(Math.log10(v)); for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p; return 10 * p; }
+function barChart({labels, series, grouped = false, fmt = v => fmtN(v), avg = null}) {
+  const W = 340, H = 132, padT = 16, padB = 18, n = labels.length, slot = W / n, ch = H - padT - padB;
+  const totals = labels.map((_, i) => grouped ? Math.max(...series.map(s => s.values[i] || 0)) : series.reduce((a, s) => a + (s.values[i] || 0), 0));
+  const max = niceMax(Math.max(...totals, avg || 0));
+  const y = v => padT + ch - (v / max) * ch;
+  let g = `<line class="grid" x1="0" x2="${W}" y1="${padT + ch}" y2="${padT + ch}"/>`;
+  if (avg) g += `<line x1="0" x2="${W}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--muted)" stroke-dasharray="3 4" stroke-width="1"/>`;
+  labels.forEach((lb, i) => {
+    const x0 = i * slot, bw = Math.min(34, slot * 0.62);
+    if (grouped) {
+      const each = bw / series.length;
+      series.forEach((s, j) => { const v = s.values[i] || 0; const x = x0 + (slot - bw) / 2 + j * each;
+        if (v > 0) g += `<rect x="${x + 1}" y="${y(v)}" width="${each - 2}" height="${padT + ch - y(v)}" rx="3" fill="var(${s.c})"/><text class="val" x="${x + each / 2}" y="${y(v) - 3}" text-anchor="middle">${fmt(v)}</text>`; });
+    } else {
+      let acc = 0; const x = x0 + (slot - bw) / 2;
+      series.forEach(s => { const v = s.values[i] || 0; if (v > 0) { g += `<rect x="${x}" y="${y(acc + v)}" width="${bw}" height="${y(acc) - y(acc + v)}" rx="3" fill="var(${s.c})"/>`; acc += v; } });
+      if (acc > 0) g += `<text class="val" x="${x + bw / 2}" y="${y(acc) - 4}" text-anchor="middle">${fmt(acc)}</text>`;
+    }
+    g += `<text x="${x0 + slot / 2}" y="${H - 4}" text-anchor="middle">${lb}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">${g}</svg>`;
+}
+function timeline(days, {big = false} = {}) {
+  const W = 340, labW = big ? 0 : 40, rowH = big ? 34 : 20, gap = 6, top = 4, cw = W - labW - 4, H = top + days.length * (rowH + gap) + 14;
+  const ev = allEvents(); let g = '';
+  [0, 6, 12, 18, 24].forEach(hh => { const x = labW + cw * hh / 24; g += `<line class="grid" x1="${x}" x2="${x}" y1="${top}" y2="${H - 14}"/><text x="${x}" y="${H - 2}" text-anchor="${hh === 0 ? 'start' : hh === 24 ? 'end' : 'middle'}">${['12a','6a','12p','6p','12a'][hh / 6]}</text>`; });
+  days.forEach((d0, i) => {
+    const y0 = top + i * (rowH + gap), d1 = addDays(d0, 1), span = d1 - d0;
+    g += `<rect x="${labW}" y="${y0}" width="${cw}" height="${rowH}" rx="4" fill="var(--surface-2)"/>`;
+    if (!big) g += `<text x="0" y="${y0 + rowH / 2 + 3.5}">${fmtDate(d0, {weekday:'short'})} ${new Date(d0).getDate()}</text>`;
+    for (const e of ev) {
+      if (e.type === 'sleep') { const s = Math.max(e.at, d0), en = Math.min(e.at + (e.minutes || 0) * MIN, d1); if (en > s) g += `<rect x="${labW + cw * (s - d0) / span}" y="${y0}" width="${Math.max(1.5, cw * (en - s) / span)}" height="${rowH}" rx="3" fill="var(--sleep)"/>`; }
+      else if (e.type === 'feed' && e.at >= d0 && e.at < d1) { const x = labW + cw * (e.at - d0) / span; g += `<rect x="${x - 1}" y="${y0 + rowH * 0.2}" width="3" height="${rowH * 0.6}" rx="1" fill="var(--feed)" stroke="var(--surface)" stroke-width="1"/>`; }
+      else if (big && e.type === 'diaper' && e.at >= d0 && e.at < d1) { const x = labW + cw * (e.at - d0) / span; g += `<circle cx="${x}" cy="${y0 + rowH + 0.5}" r="2.6" fill="var(${e.dirty ? '--dirty' : '--wet'})"/>`; }
+    }
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sleep and feeds by time of day">${g}</svg>`;
+}
+
+function renderTrends() {
+  const el = $('#view-trends');
+  const week = S.trendMode === 'week';
+  const today = sod(Date.now());
+  ensureMonthsBack(week ? addDays(S.trendEnd, -7) : addDays(S.trendDay, -7));
+  let head = `<div class="trendbar"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Trends</h2><div class="seg" role="group" aria-label="Range"><button data-mode="day" aria-pressed="${!week}">Day</button><button data-mode="week" aria-pressed="${week}">Week</button></div></div>`;
+  if (week) {
+    const end = S.trendEnd, start = addDays(end, -6);
+    head += `<div class="daynav"><button class="navbtn" data-tw="-7" aria-label="Previous week">‹</button><div class="lbl"><b>${end === today ? 'Last 7 days' : 'Week'}</b><span>${fmtDate(start, {month:'short', day:'numeric'})} – ${fmtDate(end, {month:'short', day:'numeric'})}</span></div><button class="navbtn" data-tw="7" aria-label="Next week" ${end >= today ? 'disabled' : ''}>›</button></div></div>`;
+    const days = Array.from({length: 7}, (_, i) => addDays(start, i));
+    const stats = days.map(d => rangeStats(d, addDays(d, 1)));
+    const labels = days.map(d => d === today ? 'Today' : fmtDate(d, {weekday:'short'}));
+    const fullDays = stats.some((s, i) => days[i] < today && hasData(s));
+    const avgOf = f => { const xs = stats.filter((s, i) => (fullDays ? days[i] < today : days[i] <= today) && hasData(s)).map(f); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+    const volFmt = v => U.vol === 'oz' ? fmtN(v / ML_PER_OZ) : String(Math.round(v));
+    const ints = stats.map(s => s.avgInterval);
+    const card = (title, sum, body, legend = '') => `<div class="panel chart"><div class="hd"><h2>${title}</h2><span class="avg">${sum}</span></div>${body}${legend}</div>`;
+    const lg = items => `<div class="legend">${items.map(([l, c]) => `<span style="--c:var(${c})"><i></i>${l}</span>`).join('')}</div>`;
+    const aWet = avgOf(s => s.wet), aDirty = avgOf(s => s.dirty);
+    el.innerHTML = head +
+      card('Diapers', aWet != null ? `avg ${fmtN(aWet)} wet · ${fmtN(aDirty)} dirty / day` : '', barChart({labels, grouped: true, series: [{c:'--wet', values: stats.map(s => s.wet)}, {c:'--dirty', values: stats.map(s => s.dirty)}], fmt: v => String(v)}), lg([['Wet', '--wet'], ['Dirty', '--dirty']])) +
+      card('Bottle & formula', avgOf(s => s.intakeMl) != null ? `avg ${fmtVol(avgOf(s => s.intakeMl))} / day` : '', barChart({labels, series: [{c:'--feed', values: stats.map(s => s.bottleMl)}, {c:'--formula', values: stats.map(s => s.formulaMl)}], fmt: volFmt, avg: avgOf(s => s.intakeMl)}), lg([[`Breast milk bottle (${volUnit()})`, '--feed'], [`Formula (${volUnit()})`, '--formula']])) +
+      card('Breastfeeding', avgOf(s => s.breastMin) != null ? `avg ${fmtDur(avgOf(s => s.breastMin))} / day` : '', barChart({labels, series: [{c:'--feed', values: stats.map(s => s.breastMin)}], fmt: v => fmtN(v, 0), avg: avgOf(s => s.breastMin)}), `<div class="legend"><span>Minutes at the breast per day</span></div>`) +
+      card('Feeds per day', avgOf(s => s.feeds) != null ? `avg ${fmtN(avgOf(s => s.feeds))} / day` : '', barChart({labels, series: [{c:'--feed', values: stats.map(s => s.feeds)}], fmt: v => String(v)})) +
+      card('Time between feeds', (() => { const xs = ints.filter(x => x != null); return xs.length ? `avg ${fmtDur(xs.reduce((a, b) => a + b, 0) / xs.length)} · longest ${fmtDur(Math.max(...stats.map(s => s.longestGap || 0)))}` : ''; })(), barChart({labels, series: [{c:'--feed', values: ints.map(x => x == null ? 0 : x / 60)}], fmt: v => fmtDur(v * 60)}), `<div class="legend"><span>Average gap between the start of one feed and the next</span></div>`) +
+      card('Sleep', avgOf(s => s.sleepMin) != null ? `avg ${fmtDur(avgOf(s => s.sleepMin))} / day` : '', barChart({labels, series: [{c:'--sleep', values: stats.map(s => s.sleepMin / 60)}], fmt: v => fmtN(v), avg: avgOf(s => s.sleepMin / 60)}) + `<div class="eyebrow" style="margin-top:6px">Sleep pattern</div>` + timeline(days), lg([['Hours asleep', '--sleep'], ['Feed', '--feed']])) +
+      card('Tummy time', avgOf(s => s.tummyMin) != null ? `avg ${fmtDur(avgOf(s => s.tummyMin))} / day` : '', barChart({labels, series: [{c:'--tummy', values: stats.map(s => s.tummyMin)}], fmt: v => fmtN(v, 0)}), `<div class="legend"><span>Minutes per day</span></div>`) +
+      card('Pumping', avgOf(s => s.pumpMl) != null ? `avg ${fmtVol(avgOf(s => s.pumpMl))} / day` : '', barChart({labels, series: [{c:'--pump', values: stats.map(s => s.pumpMl)}], fmt: volFmt}), `<div class="legend"><span>${U.vol === 'oz' ? 'Ounces' : 'Milliliters'} pumped per day</span></div>`);
+  } else {
+    const d = S.trendDay, st = rangeStats(d, addDays(d, 1));
+    const prev = Array.from({length: 7}, (_, i) => rangeStats(addDays(d, -7 + i), addDays(d, -6 + i))).filter(hasData);
+    const pa = f => prev.length ? prev.reduce((a, s) => a + (f(s) || 0), 0) / prev.length : null;
+    head += `<div class="daynav"><button class="navbtn" data-td="-1" aria-label="Previous day">‹</button><div class="lbl"><b>${d === today ? 'Today' : fmtDate(d, {weekday:'long'})}</b><span>${fmtDate(d, {month:'long', day:'numeric'})}</span></div><button class="navbtn" data-td="1" aria-label="Next day" ${d >= today ? 'disabled' : ''}>›</button></div></div>`;
+    const tile = (k, c, v, a) => `<div class="tile" style="--c:var(${c})"><div class="k"><i></i>${k}</div><div class="v num">${v}</div><div class="s num">${a != null ? 'prior 7-day avg ' + a : '&nbsp;'}</div></div>`;
+    el.innerHTML = head + `<div class="tiles">
+      ${tile('Wet diapers', '--wet', st.wet, prev.length ? fmtN(pa(s => s.wet)) : null)}
+      ${tile('Dirty diapers', '--dirty', st.dirty, prev.length ? fmtN(pa(s => s.dirty)) : null)}
+      ${tile('Feeds', '--feed', st.feeds, prev.length ? fmtN(pa(s => s.feeds)) : null)}
+      ${tile('Bottle + formula', '--feed', fmtVol(st.intakeMl), prev.length ? fmtVol(pa(s => s.intakeMl)) : null)}
+      ${tile('Breastfeeding', '--feed', fmtDur(st.breastMin), prev.length ? fmtDur(pa(s => s.breastMin)) : null)}
+      ${tile('Avg time between feeds', '--feed', fmtDur(st.avgInterval), prev.length ? fmtDur(pa(s => s.avgInterval)) : null)}
+      ${tile('Longest gap between feeds', '--feed', fmtDur(st.longestGap), null)}
+      ${tile('Total sleep', '--sleep', fmtDur(st.sleepMin), prev.length ? fmtDur(pa(s => s.sleepMin)) : null)}
+      ${tile('Longest sleep', '--sleep', fmtDur(st.longestSleep || null), prev.length ? fmtDur(pa(s => s.longestSleep)) : null)}
+      ${tile('Tummy time', '--tummy', fmtDur(st.tummyMin), prev.length ? fmtDur(pa(s => s.tummyMin)) : null)}
+      ${tile('Pumped', '--pump', fmtVol(st.pumpMl), prev.length ? fmtVol(pa(s => s.pumpMl)) : null)}
+      ${tile('Naps & sleeps', '--sleep', st.sleeps, prev.length ? fmtN(pa(s => s.sleeps)) : null)}
+    </div>
+    <div class="panel chart"><div class="hd"><h2>The day at a glance</h2></div>${timeline([d], {big: true})}<div class="legend"><span style="--c:var(--sleep)"><i></i>Asleep</span><span style="--c:var(--feed)"><i></i>Feed</span><span style="--c:var(--wet)"><i></i>Wet</span><span style="--c:var(--dirty)"><i></i>Dirty</span></div></div>`;
+  }
+}
+const hasData = s => s.diapers || s.feeds || s.sleepMin || s.tummies || s.pumps;
+
+function renderVisit() {
+  const el = $('#view-visit'); const now = Date.now();
+  const s24 = rangeStats(now - DAY, now);
+  const ev = allEvents(); const first = ev.length ? ev[0].at : now;
+  const spanDays = Math.max(1, Math.min(7, (now - first) / DAY));
+  const s7 = rangeStats(now - spanDays * DAY, now);
+  const pd = x => x / spanDays;
+  const g = S.growth.filter(x => x.grams); const lastG = g[g.length - 1], prevG = g[g.length - 2];
+  const lastLen = [...S.growth].reverse().find(x => x.cm), lastHead = [...S.growth].reverse().find(x => x.headCm);
+  let gain = '';
+  if (lastG && prevG && lastG.at - prevG.at > DAY / 2) { const gd = (lastG.grams - prevG.grams) / ((lastG.at - prevG.at) / DAY); gain = ` · ${gd >= 0 ? '+' : '−'}${U.wt === 'metric' ? Math.round(Math.abs(gd)) + ' g' : fmtN(Math.abs(gd) / G_PER_OZ) + ' oz'}/day since ${fmtDate(prevG.at, {month:'short', day:'numeric'})}`; }
+  const ld = lastOf(e => e.type === 'diaper' && e.dirty);
+  const upcoming = S.visits.filter(v => v.at >= now - 3 * HOUR).sort((a, b) => a.at - b.at);
+  const past = S.visits.filter(v => v.at < now - 3 * HOUR).sort((a, b) => b.at - a.at);
+  const next = upcoming[0];
+  const sec = (t, c) => `<tr class="sec" style="--c:var(${c})"><td colspan="3">${t}</td></tr>`;
+  const tr = (k, a, b) => `<tr><td>${k}</td><td class="num">${a}</td><td class="num">${b}</td></tr>`;
+  const dis = S.readOnly || S.mode === 'unavailable' ? 'disabled' : '';
+  const qs = next ? (next.questions || []) : [];
+  const qIn = $('#addqText'), qVal = qIn ? qIn.value : '', qFocus = qIn && document.activeElement === qIn;
+  queueMicrotask(() => { const n = $('#addqText'); if (n && qVal) n.value = qVal; if (n && qFocus) n.focus(); });
+  el.innerHTML = `
+  <div class="panel vsum">
+    <div class="h"><h2>For the pediatrician</h2><span class="asof">as of ${fmtDate(now, {month:'short', day:'numeric'})}, ${fmtTime(now)}</span></div>
+    <div class="baby">${esc(babyName())}${age() ? ' · ' + age() : ''}${S.settings.birth ? ' · born ' + fmtDate(new Date(S.settings.birth + 'T00:00').getTime(), {month:'short', day:'numeric', year:'numeric'}) : ''}</div>
+    <div class="growth">
+      <div>${lastG ? `<b class="num">${fmtWeight(lastG.grams)}</b>` : 'Weight —'}${lastLen ? ` · <b class="num">${fmtLen(lastLen.cm)}</b> long` : ''}${lastHead ? ` · head <b class="num">${fmtLen(lastHead.headCm)}</b>` : ''}</div>
+      <div class="sm">${lastG ? `Weighed ${fmtDate(lastG.at, {month:'short', day:'numeric'})}${esc(gain)}` : 'Log a weight with Growth on the Log tab'}</div>
+    </div>
+    <table class="vtable">
+      <thead><tr><th></th><th>Last 24h</th><th>Avg/day${spanDays < 7 ? ` (${fmtN(spanDays, 0) || 1}d)` : ' (7d)'}</th></tr></thead>
+      <tbody>
+      ${sec('Feeding', '--feed')}
+      ${tr('Feeds', s24.feeds, fmtN(pd(s7.feeds)))}
+      ${tr('Bottle + formula', fmtVol(s24.intakeMl), fmtVol(pd(s7.intakeMl)))}
+      ${tr('Breastfeeding', fmtDur(s24.breastMin), fmtDur(pd(s7.breastMin)))}
+      ${tr('Time between feeds', fmtDur(s24.avgInterval), fmtDur(s7.avgInterval))}
+      ${tr('Longest gap <span class="sm">(7d = max)</span>', fmtDur(s24.longestGap), fmtDur(s7.longestGap))}
+      ${sec('Diapers', '--diaper')}
+      ${tr('Wet', s24.wet, fmtN(pd(s7.wet)))}
+      ${tr(`Dirty${ld ? ` <span class="sm">· last ${fmtAgo(ld.at)}</span>` : ''}`, s24.dirty, fmtN(pd(s7.dirty)))}
+      ${sec('Sleep', '--sleep')}
+      ${tr('Total sleep', fmtDur(s24.sleepMin), fmtDur(pd(s7.sleepMin)))}
+      ${tr('Longest stretch <span class="sm">(7d = max)</span>', fmtDur(s24.longestSleep || null), fmtDur(s7.longestSleep || null))}
+      ${sec('Other', '--tummy')}
+      ${tr('Tummy time', fmtDur(s24.tummyMin), fmtDur(pd(s7.tummyMin)))}
+      ${tr('Pumped', fmtVol(s24.pumpMl), fmtVol(pd(s7.pumpMl)))}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2>Questions to ask</h2>${next ? `<button class="linkbtn" data-editvisit="${esc(next._path)}">Edit visit</button>` : ''}</div>
+    ${next ? `<div class="meta" style="margin:2px 0 8px">Next visit ${fmtDate(next.at, {weekday:'short', month:'short', day:'numeric'})}, ${fmtTime(next.at)}${next.place ? ' · ' + esc(next.place) : ''}</div>
+      ${qs.length ? `<ul class="qlist">${qs.map((q, i) => `<li class="${q.done ? 'done' : ''}"><button class="ck" data-q="${i}" aria-label="${q.done ? 'Mark as not answered' : 'Mark as answered'}" ${dis}>${icon('check')}</button><span>${esc(q.text)}</span></li>`).join('')}</ul>` : `<div class="meta">No questions yet. Add them as they come up.</div>`}
+      <form class="addq" id="addq"><input type="text" id="addqText" placeholder="Add a question" autocomplete="off" ${dis}><button class="btn" ${dis}>Add</button></form>`
+    : `<div class="meta" style="margin:6px 0 10px">Schedule the next visit to start a list of questions for it.</div><button class="btn" data-add="visit" ${dis}>Add next visit</button>`}
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Visits</h2><button class="linkbtn" data-add="visit" ${dis}>+ Add visit</button></div>
+    ${!S.visits.length ? `<div class="meta" style="margin-top:6px">No visits logged yet.</div>` : `<div class="list" style="margin-top:10px">${[...upcoming, ...past].map(v => `<button class="row" data-editvisit="${esc(v._path)}" style="--c:var(--visit)"><span class="dot">${icon('visit')}</span><span class="main"><span class="ttl">${v.at >= now - 3 * HOUR ? 'Upcoming' : 'Visit'}${v.place ? ' · ' + esc(v.place) : ''}</span>${v.notes ? `<div class="sub">${esc(v.notes.length > 140 ? v.notes.slice(0, 140) + '…' : v.notes)}</div>` : ''}<div class="sub">${(v.questions || []).length} question${(v.questions || []).length === 1 ? '' : 's'} · logged ${fmtDate(v.loggedAt, {month:'short', day:'numeric'})}${esc(byName(v.by))}</div></span><span class="when num">${fmtDate(v.at, {month:'short', day:'numeric'})}<div class="sub">${fmtTime(v.at)}</div></span></button>`).join('')}</div>`}
+  </div>`;
+  resolveNames([...new Set(S.visits.map(v => v.by).filter(Boolean))]);
+}
+
+/* ---------- forms ---------- */
+let sheetCtx = null;
+function closeSheet() { $('#sheetRoot').innerHTML = ''; sheetCtx = null; document.body.style.overflow = ''; }
+function openSheet(title, colorVar, ic, inner) {
+  $('#sheetRoot').innerHTML = `<div class="backdrop" id="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}" style="--c:var(${colorVar})"><div class="grab"></div><div class="sh"><span class="dot">${ic}</span><h2>${esc(title)}</h2><button class="iconbtn" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>${inner}</div></div>`;
+  document.body.style.overflow = 'hidden';
+}
+const fWhen = (label, t, id = 'f-at') => `<div class="fld"><label for="${id}">${label}</label><input type="datetime-local" id="${id}" value="${toLocalInput(t)}"></div>`;
+function fNum(id, label, val, unit, step, presets, hint = '') {
+  return `<div class="fld"><label for="${id}">${label}${hint ? ` <span class="hint">${hint}</span>` : ''}</label><div class="numrow"><button type="button" class="step" data-step="-${step}" data-for="${id}" aria-label="Less">−</button><input id="${id}" type="number" inputmode="decimal" min="0" step="any" value="${val ?? ''}"><span class="unit">${unit}</span><button type="button" class="step" data-step="${step}" data-for="${id}" aria-label="More">+</button></div>${presets && presets.length ? `<div class="chips">${presets.map(p => `<button type="button" class="chip" data-set="${id}" data-val="${p}">${p} ${unit}</button>`).join('')}</div>` : ''}</div>`;
+}
+const fNote = v => `<div class="fld"><label for="f-note">Note <span class="hint">optional</span></label><input type="text" id="f-note" value="${esc(v || '')}" autocomplete="off"></div>`;
+const volPresets = () => U.vol === 'oz' ? [1, 2, 3, 4, 5, 6] : [30, 60, 90, 120, 150, 180];
+const volStep = () => U.vol === 'oz' ? 0.5 : 10;
+
+function timerRow(key, label) {
+  if (sheetCtx && sheetCtx.edit) return '';
+  const running = S.timers && S.timers[key];
+  if (sheetCtx && sheetCtx.fromTimer) return `<div class="timerline"><span>Filled in from the timer.</span><button type="button" class="linkbtn" data-discard="${key}">Discard timer</button></div>`;
+  if (running) return '';
+  return `<div class="timerline"><span>${label}</span><button type="button" class="linkbtn" data-starttimer="${key}">Start timer</button></div>`;
+}
+
+function openForm(type, existing, prefill = {}) {
+  const e = existing || {};
+  const t = TYPES[type];
+  sheetCtx = {type, edit: !!existing, existing, fromTimer: !!prefill.fromTimer, timerKey: prefill.timerKey};
+  const at = e.at ?? prefill.at ?? Date.now();
+  let body = '';
+  if (type === 'diaper') {
+    body = `<div class="toggle2" style="--c:var(--diaper)">
+      <button type="button" class="tbig" data-tog="wet" aria-pressed="${!!e.wet}" style="--c:var(--wet)">Wet<small>pee</small></button>
+      <button type="button" class="tbig" data-tog="dirty" aria-pressed="${!!e.dirty}" style="--c:var(--dirty)">Dirty<small>poop</small></button></div>
+      <div class="meta">Tap one or both.</div>${fWhen('Time', at)}${fNote(e.note)}`;
+  } else if (type === 'feed') {
+    const m = e.method || prefill.method || lsGet('lastMethod') || 'bottle';
+    body = `<div class="fld"><span>How was he fed?</span><div class="seg" role="group" style="display:grid" aria-label="Feeding method">
+      ${[['breast','Breast'],['bottle','Bottle'],['formula','Formula']].map(([k, l]) => `<button type="button" data-method="${k}" aria-pressed="${m === k}">${l}</button>`).join('')}</div>
+      <div class="meta" id="methodHint"></div></div>
+      <div id="breastFields" ${m === 'breast' ? '' : 'hidden'}>
+        <div style="display:flex;flex-direction:column;gap:14px">
+        ${fNum('f-min', 'Duration', e.minutes ?? prefill.minutes ?? '', 'min', 1, [5, 10, 15, 20, 30])}
+        <div class="fld"><span>Side <span class="hint">optional</span></span><div class="chips">${[['L','Left'],['R','Right'],['B','Both']].map(([k, l]) => `<button type="button" class="chip" data-side="${k}" aria-pressed="${e.side === k}" style="--c:var(--feed)">${l}</button>`).join('')}</div></div>
+        ${timerRow('breast', 'Timing a feed right now?')}
+        </div>
+      </div>
+      <div id="volFields" ${m === 'breast' ? 'hidden' : ''}>${fNum('f-vol', 'Amount', e.ml != null ? mlToVol(e.ml) : '', volUnit(), volStep(), volPresets())}</div>
+      ${fWhen(m === 'breast' ? 'Started at' : 'Time', at)}${fNote(e.note)}`;
+  } else if (type === 'pump') {
+    body = `${fNum('f-vol', 'Amount pumped', e.ml != null ? mlToVol(e.ml) : '', volUnit(), volStep(), volPresets(), 'both sides combined')}
+      ${fNum('f-min', 'Session length', e.minutes ?? '', 'min', 5, [10, 15, 20, 30], 'optional')}${fWhen('Time', at)}${fNote(e.note)}`;
+  } else if (type === 'sleep') {
+    const mins = e.minutes ?? prefill.minutes ?? '';
+    body = `${fWhen('Fell asleep at', at)}
+      <div class="fld"><span>Duration</span><div class="two">
+        <div class="numrow"><input id="f-h" type="number" inputmode="numeric" min="0" step="1" value="${mins === '' ? '' : Math.floor(mins / 60)}" aria-label="Hours"><span class="unit">hr</span></div>
+        <div class="numrow"><input id="f-m" type="number" inputmode="numeric" min="0" max="59" step="1" value="${mins === '' ? '' : Math.round(mins % 60)}" aria-label="Minutes"><span class="unit">min</span></div></div>
+        <div class="chips">${[30, 45, 60, 90, 120, 180].map(p => `<button type="button" class="chip" data-hm="${p}">${fmtDur(p)}</button>`).join('')}</div></div>
+      ${timerRow('sleep', 'Going down for a nap now?')}${fNote(e.note)}`;
+  } else if (type === 'tummy') {
+    body = `${fNum('f-min', 'Duration', e.minutes ?? prefill.minutes ?? '', 'min', 1, [2, 3, 5, 10, 15])}${timerRow('tummy', 'Starting tummy time now?')}${fWhen('Started at', at)}${fNote(e.note)}`;
+  } else if (type === 'growth') {
+    const metric = U.wt === 'metric';
+    const lb = e.grams ? Math.floor(e.grams / G_PER_OZ / 16) : '', oz = e.grams ? r1(e.grams / G_PER_OZ - lb * 16) : '';
+    body = `<div class="fld"><span>Weight</span>${metric
+      ? `<div class="numrow"><input id="f-kg" type="number" inputmode="decimal" step="any" min="0" value="${e.grams ? r1(e.grams / 10) / 100 : ''}" aria-label="Kilograms"><span class="unit">kg</span></div>`
+      : `<div class="two"><div class="numrow"><input id="f-lb" type="number" inputmode="numeric" min="0" step="1" value="${lb}" aria-label="Pounds"><span class="unit">lb</span></div><div class="numrow"><input id="f-oz" type="number" inputmode="decimal" min="0" step="any" value="${oz}" aria-label="Ounces"><span class="unit">oz</span></div></div>`}</div>
+      <div class="two">
+        <div class="fld"><label for="f-len">Length <span class="hint">${metric ? 'cm' : 'in'}</span></label><input id="f-len" type="number" inputmode="decimal" step="any" min="0" value="${e.cm ? (metric ? r1(e.cm) : r1(e.cm / CM_PER_IN * 10) / 10) : ''}"></div>
+        <div class="fld"><label for="f-head">Head <span class="hint">${metric ? 'cm' : 'in'}</span></label><input id="f-head" type="number" inputmode="decimal" step="any" min="0" value="${e.headCm ? (metric ? r1(e.headCm) : r1(e.headCm / CM_PER_IN * 10) / 10) : ''}"></div>
+      </div>${fWhen('Measured on', at)}${fNote(e.note)}`;
+  } else if (type === 'visit') {
+    const qtext = (e.questions || []).map(q => q.text).join('\n');
+    body = `${fWhen('Date and time', e.at ?? defaultVisitTime())}
+      <div class="fld"><label for="f-place">Doctor or clinic <span class="hint">optional</span></label><input type="text" id="f-place" value="${esc(e.place || '')}" autocomplete="off"></div>
+      <div class="fld"><label for="f-q">Questions we have <span class="hint">one per line</span></label><textarea id="f-q" rows="4">${esc(qtext)}</textarea></div>
+      <div class="fld"><label for="f-notes">Notes <span class="hint">what the doctor said, next steps</span></label><textarea id="f-notes" rows="4">${esc(e.notes || '')}</textarea></div>`;
+  }
+  const meta = existing ? `<div class="meta">Logged ${fmtDate(e.loggedAt, {month:'short', day:'numeric'})} at ${fmtTime(e.loggedAt)}${esc(byName(e.by))}${e.editedAt ? ` · edited ${fmtDate(e.editedAt, {month:'short', day:'numeric'})} ${fmtTime(e.editedAt)}` : ''}</div>` : `<div class="meta">The time you save this is recorded automatically.</div>`;
+  openSheet(existing ? `Edit ${t.label.toLowerCase()}` : (type === 'visit' ? 'Pediatrician visit' : t.label), t.c, icon(type),
+    `<form class="f" id="evForm" novalidate>${body}<div class="err" id="formErr" hidden></div>${meta}<div class="actions">${existing ? `<button type="button" class="btn danger" id="btnDel">Delete</button>` : ''}<button class="btn" id="btnSave" ${S.readOnly ? 'disabled' : ''}>${existing ? 'Save changes' : 'Save'}</button></div></form>`);
+  if (type === 'feed') updateMethodHint();
+}
+function defaultVisitTime() { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d.getTime(); }
+function updateMethodHint() { const m = currentMethod(); const h = $('#methodHint'); if (h) h.textContent = m === 'bottle' ? 'Bottle of pumped breast milk' : m === 'formula' ? 'Formula, by bottle' : 'Nursing at the breast'; }
+const currentMethod = () => { const b = $('[data-method][aria-pressed="true"]'); return b ? b.dataset.method : 'bottle'; };
+const num = id => { const el = $('#' + id); if (!el || el.value.trim() === '') return null; const v = parseFloat(el.value); return isFinite(v) ? v : NaN; };
+
+function collect() {
+  const {type} = sheetCtx; const err = m => { const el = $('#formErr'); el.textContent = m; el.hidden = false; return null; };
+  const at = fromLocalInput($('#f-at').value); if (at == null) return err('Pick a date and time.');
+  if (type !== 'visit' && at > Date.now() + 5 * MIN) return err("That time is in the future. Check the date and time.");
+  const note = $('#f-note') ? $('#f-note').value.trim() : '';
+  const d = {type, at}; if (note) d.note = note;
+  if (type === 'diaper') { d.wet = $('[data-tog="wet"]').getAttribute('aria-pressed') === 'true'; d.dirty = $('[data-tog="dirty"]').getAttribute('aria-pressed') === 'true'; if (!d.wet && !d.dirty) return err('Choose wet, dirty, or both.'); }
+  else if (type === 'feed') {
+    d.method = currentMethod(); lsSet('lastMethod', d.method);
+    if (d.method === 'breast') { const m = num('f-min'); if (!(m > 0)) return err('Enter how many minutes he nursed.'); d.minutes = m; const s = $('[data-side][aria-pressed="true"]'); if (s) d.side = s.dataset.side; }
+    else { const v = num('f-vol'); if (!(v > 0)) return err(`Enter how much he drank (${volUnit()}).`); d.ml = Math.round(volToMl(v) * 10) / 10; }
+  }
+  else if (type === 'pump') { const v = num('f-vol'); if (!(v > 0)) return err(`Enter the amount pumped (${volUnit()}).`); d.ml = Math.round(volToMl(v) * 10) / 10; const m = num('f-min'); if (m > 0) d.minutes = m; }
+  else if (type === 'sleep') { const h = num('f-h') || 0, m = num('f-m') || 0; if (isNaN(h) || isNaN(m) || h * 60 + m <= 0) return err('Enter how long he slept.'); d.minutes = h * 60 + m; if (at + d.minutes * MIN > Date.now() + 5 * MIN) return err('That sleep would end in the future. Check the start time or duration.'); }
+  else if (type === 'tummy') { const m = num('f-min'); if (!(m > 0)) return err('Enter the minutes of tummy time.'); d.minutes = m; }
+  else if (type === 'growth') {
+    let g = null;
+    if (U.wt === 'metric') { const kg = num('f-kg'); if (kg > 0) g = kg * 1000; }
+    else { const lb = num('f-lb') || 0, oz = num('f-oz') || 0; if (lb * 16 + oz > 0) g = (lb * 16 + oz) * G_PER_OZ; }
+    const f = U.wt === 'metric' ? 1 : CM_PER_IN; const len = num('f-len'), head = num('f-head');
+    if (g) d.grams = Math.round(g); if (len > 0) d.cm = r1(len * f * 10) / 10; if (head > 0) d.headCm = r1(head * f * 10) / 10;
+    if (!d.grams && !d.cm && !d.headCm) return err('Enter at least one measurement.');
+  }
+  else if (type === 'visit') {
+    const place = $('#f-place').value.trim(), notes = $('#f-notes').value.trim();
+    const old = (sheetCtx.existing && sheetCtx.existing.questions) || [];
+    d.questions = $('#f-q').value.split('\n').map(s => s.trim()).filter(Boolean).map(text => ({text, done: !!(old.find(q => q.text === text) || {}).done}));
+    d.place = place; d.notes = notes;
+  }
+  return d;
+}
+
+async function saveForm() {
+  const d = collect(); if (!d) return;
+  const ex = sheetCtx.existing; const now = Date.now();
+  const coll = d.type === 'visit' ? 'visits' : d.type === 'growth' ? 'growth' : null;
+  const path = ex ? ex._path : coll ? `${coll}/${uid()}` : `m/${monthKey(now)}/events/${uid()}`;
+  const body = {...d, loggedAt: ex ? ex.loggedAt : now, by: ex ? (ex.by ?? null) : (S.me ?? null)};
+  if (ex) body.editedAt = now;
+  if (coll) delete body.type;
+  ensureMonth(monthKey(now));
+  const btn = $('#btnSave'); btn.disabled = true;
+  const ok = await write(() => store.set(path, body));
+  if (ok && sheetCtx && sheetCtx.timerKey) await clearTimer(sheetCtx.timerKey);
+  if (ok) { closeSheet(); toast(ex ? 'Saved' : `${TYPES[d.type].label} logged`); if (!ex && d.type !== 'visit') S.day = sod(Date.now()); render(); }
+  else if (btn) btn.disabled = false;
+}
+
+async function startTimer(key) {
+  const next = {...(S.timers || {}), [key]: {start: Date.now(), by: S.me ?? null}};
+  if (await write(() => store.set('live/timers', next))) { closeSheet(); S.view = 'today'; location.hash = 'today'; toast('Timer started'); render(); }
+}
+async function clearTimer(key) { const next = {...(S.timers || {})}; delete next[key]; return write(() => store.set('live/timers', next)); }
+function stopTimer(key) {
+  const t = S.timers[key]; if (!t) return;
+  const minutes = Math.max(1, Math.round((Date.now() - t.start) / MIN));
+  if (key === 'sleep') openForm('sleep', null, {at: t.start, minutes, fromTimer: true, timerKey: key});
+  else if (key === 'tummy') openForm('tummy', null, {at: t.start, minutes, fromTimer: true, timerKey: key});
+  else openForm('feed', null, {at: t.start, minutes, method: 'breast', fromTimer: true, timerKey: key});
+}
+
+function findByPath(p) {
+  for (const e of allEvents()) if (e._path === p) return e;
+  for (const v of S.visits) if (v._path === p) return {...v, type: 'visit'};
+  for (const g of S.growth) if (g._path === p) return {...g, type: 'growth'};
+  return null;
+}
+
+/* ---------- settings ---------- */
+function openSettings() {
+  sheetCtx = {settings: true};
+  openSheet('Settings', '--accent', `<svg class="i" viewBox="0 0 24 24"><path d="M4 6h9M18 6h2M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15.5" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg>`, `
+    <form class="f" id="setForm" novalidate>
+      <div class="eyebrow">Shared with everyone using the log</div>
+      <div class="two">
+        <div class="fld"><label for="s-name">Baby's name</label><input type="text" id="s-name" value="${esc(babyName())}" autocomplete="off"></div>
+        <div class="fld"><label for="s-birth">Birth date</label><input type="date" id="s-birth" value="${esc(S.settings.birth || '')}"></div>
+      </div>
+      <div class="eyebrow" style="margin-top:4px">Units on this device</div>
+      <div class="fld"><span>Milk amounts</span><div class="seg" role="group" style="display:grid">${[['oz','Ounces (oz)'],['ml','Milliliters (ml)']].map(([k, l]) => `<button type="button" data-unit-vol="${k}" aria-pressed="${U.vol === k}">${l}</button>`).join('')}</div></div>
+      <div class="fld"><span>Weight and length</span><div class="seg" role="group" style="display:grid">${[['imperial','lb · in'],['metric','kg · cm']].map(([k, l]) => `<button type="button" data-unit-wt="${k}" aria-pressed="${U.wt === k}">${l}</button>`).join('')}</div></div>
+      <div class="eyebrow" style="margin-top:4px">This phone</div>
+      <div class="fld"><label for="s-who">Your name <span class="hint">shown next to what you log</span></label><input type="text" id="s-who" value="${esc(S.me || '')}" autocomplete="given-name"></div>
+      <div class="err" id="formErr" hidden></div>
+      <div class="actions"><button class="btn">Save</button></div>
+      <div class="actions"><button type="button" class="btn ghost" id="btnSignOut">Sign out on this phone</button></div>
+    </form>`);
+}
+async function saveSettings() {
+  const vol = $('[data-unit-vol][aria-pressed="true"]').dataset.unitVol, wt = $('[data-unit-wt][aria-pressed="true"]').dataset.unitWt;
+  U.vol = vol; U.wt = wt; lsSet('vol', vol); lsSet('wt', wt);
+  const who = $('#s-who').value.trim(); if (who) { S.me = who; lsSet('who', who); }
+  const name = $('#s-name').value.trim() || 'Baby', birth = $('#s-birth').value || '';
+  if (name !== (S.settings.name || 'Baby') || birth !== (S.settings.birth || '')) {
+    if (!(await write(() => store.set('settings/main', {name, birth})))) { render(); return; }
+  }
+  closeSheet(); toast('Settings saved'); render();
+}
+
+/* ---------- questions on the visit page ---------- */
+async function updateVisit(v, questions) {
+  const body = {...v}; delete body.id; delete body._path; delete body.type; body.questions = questions;
+  return write(() => store.set(v._path, body));
+}
+
+/* ---------- events ---------- */
+let toastT = null;
+function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2200); }
+function route() { const h = location.hash.replace('#', ''); S.view = ['today', 'trends', 'visit'].includes(h) ? h : 'today'; }
+window.addEventListener('hashchange', () => { route(); render(); window.scrollTo(0, 0); });
+
+let delArmed = null;
+document.addEventListener('click', async ev => {
+  const b = ev.target.closest('button, .backdrop'); if (!b) return;
+  if (b.id === 'backdrop') { if (ev.target === b) closeSheet(); return; }
+  const ds = b.dataset;
+  if (ds.view) { location.hash = ds.view; return; }
+  if (ds.goto) { location.hash = ds.goto; return; }
+  if ('close' in ds) { closeSheet(); return; }
+  if (b.id === 'btnSettings') { openSettings(); return; }
+  if (b.id === 'btnSignOut') { closeSheet(); if (sb) await sb.auth.signOut(); showGate(); return; }
+  if (ds.add) { openForm(ds.add); return; }
+  if (ds.edit) { const e = findByPath(ds.edit); if (e) openForm(e.type, e); return; }
+  if (ds.editvisit) { const e = findByPath(ds.editvisit); if (e) openForm('visit', e); return; }
+  if (ds.day) { const n = addDays(S.day, +ds.day); if (n <= sod(Date.now())) { S.day = n; ensureMonthsBack(n); render(); } return; }
+  if (ds.mode) { S.trendMode = ds.mode; render(); return; }
+  if (ds.tw) { const n = addDays(S.trendEnd, +ds.tw); S.trendEnd = Math.min(n, sod(Date.now())); render(); return; }
+  if (ds.td) { const n = addDays(S.trendDay, +ds.td); if (n <= sod(Date.now())) { S.trendDay = n; render(); } return; }
+  if (ds.stop) { stopTimer(ds.stop); return; }
+  if (ds.starttimer) { startTimer(ds.starttimer); return; }
+  if (ds.discard) { if (await clearTimer(ds.discard)) { closeSheet(); toast('Timer discarded'); render(); } return; }
+  if (ds.tog) { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); return; }
+  if (ds.method) { $$('[data-method]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); const br = ds.method === 'breast'; $('#breastFields').hidden = !br; $('#volFields').hidden = br; const l = $('label[for="f-at"]'); if (l) l.textContent = br ? 'Started at' : 'Time'; updateMethodHint(); return; }
+  if (ds.side) { const on = b.getAttribute('aria-pressed') === 'true'; $$('[data-side]').forEach(x => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', on ? 'false' : 'true'); return; }
+  if (ds.set) { $('#' + ds.set).value = ds.val; return; }
+  if (ds.hm) { const m = +ds.hm; $('#f-h').value = Math.floor(m / 60); $('#f-m').value = m % 60; return; }
+  if (ds.step) { const inp = $('#' + ds.for); const v = (parseFloat(inp.value) || 0) + parseFloat(ds.step); inp.value = Math.max(0, Math.round(v * 100) / 100); return; }
+  if (ds.unitVol) { $$('[data-unit-vol]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); return; }
+  if (ds.unitWt) { $$('[data-unit-wt]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); return; }
+  if (ds.q != null && ds.q !== '') { const now = Date.now(); const next = S.visits.filter(v => v.at >= now - 3 * HOUR).sort((a, c) => a.at - c.at)[0]; if (!next) return; const qs = (next.questions || []).map((q, i) => i === +ds.q ? {...q, done: !q.done} : q); updateVisit(next, qs); return; }
+  if (b.id === 'btnDel') {
+    if (delArmed !== b) { delArmed = b; b.classList.add('arm'); b.textContent = 'Tap again to delete'; setTimeout(() => { if (delArmed === b) { delArmed = null; b.classList.remove('arm'); b.textContent = 'Delete'; } }, 3500); return; }
+    delArmed = null; const p = sheetCtx.existing._path;
+    if (await write(() => store.del(p))) { closeSheet(); toast('Deleted'); render(); }
+    return;
+  }
+});
+document.addEventListener('submit', ev => {
+  ev.preventDefault();
+  if (ev.target.id === 'gateForm') signIn();
+  else if (ev.target.id === 'evForm') saveForm();
+  else if (ev.target.id === 'setForm') saveSettings();
+  else if (ev.target.id === 'addq') {
+    const inp = $('#addqText'); const text = inp.value.trim(); if (!text) return;
+    const now = Date.now(); const next = S.visits.filter(v => v.at >= now - 3 * HOUR).sort((a, c) => a.at - c.at)[0]; if (!next) return;
+    updateVisit(next, [...(next.questions || []), {text, done: false}]).then(ok => { if (ok) { inp.value = ''; } });
+  }
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && sheetCtx) closeSheet(); });
+
+/* light ticking: refresh "ago" labels and timers without writing anything */
+setInterval(() => {
+  $$('[data-since]').forEach(el => el.textContent = elapsed(+el.dataset.since));
+}, 15000);
+let knownToday = sod(Date.now());
+function rollDay() {
+  const t = sod(Date.now()); if (t === knownToday) return false;
+  for (const k of ['day', 'trendEnd', 'trendDay']) if (S[k] === knownToday) S[k] = t;
+  knownToday = t; ensureMonth(monthKey(Date.now())); return true;
+}
+setInterval(() => { const rolled = rollDay(); if (!sheetCtx && (S.view !== 'trends' || rolled)) render(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { rollDay(); if (!sheetCtx) render(); } });
+
+/* ---------- sample data for local previews only (localhost) ---------- */
+function seedPreview(st) {
+  const now = Date.now(); const today = sod(now);
+  const put = (p, d) => st.docs.set(p, d);
+  put('settings/main', {name: 'Sample baby', birth: (() => { const d = new Date(addDays(today, -44)); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })()});
+  let rnd = 7; const R = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
+  for (let day = -9; day <= 0; day++) {
+    const d0 = addDays(today, day);
+    let t = d0 + 30 * MIN + R() * 40 * MIN, i = 0;
+    while (t < d0 + DAY && t < now - 20 * MIN) {
+      const method = i % 3 === 0 ? 'breast' : i % 3 === 1 ? 'bottle' : 'formula';
+      const feed = {type:'feed', at:t, loggedAt:t + 4 * MIN, by:null, method};
+      if (method === 'breast') { feed.minutes = Math.round(12 + R() * 14); feed.side = ['L','R','B'][i % 3]; } else feed.ml = Math.round((2.5 + R() * 1.8) * 2) / 2 * ML_PER_OZ;
+      put(`m/${monthKey(feed.loggedAt)}/events/f${day}-${i}`, feed);
+      const dt = t + 25 * MIN; if (dt < now) put(`m/${monthKey(dt)}/events/d${day}-${i}`, {type:'diaper', at:dt, loggedAt:dt + MIN, by:null, wet:true, dirty:R() < 0.38});
+      const night = new Date(t).getHours() >= 21 || new Date(t).getHours() < 5;
+      const sl = Math.round(night ? 150 + R() * 90 : 45 + R() * 70); const ss = t + 40 * MIN;
+      if (ss + sl * MIN < now) put(`m/${monthKey(ss)}/events/s${day}-${i}`, {type:'sleep', at:ss, loggedAt:ss + sl * MIN, by:null, minutes:sl});
+      if (!night && i % 2 === 0 && t + 90 * MIN < now) put(`m/${monthKey(t)}/events/t${day}-${i}`, {type:'tummy', at:t + 70 * MIN, loggedAt:t + 80 * MIN, by:null, minutes:Math.round(4 + R() * 8)});
+      if (i % 3 === 1 && t + 60 * MIN < now) put(`m/${monthKey(t)}/events/p${day}-${i}`, {type:'pump', at:t + 50 * MIN, loggedAt:t + 70 * MIN, by:null, ml:Math.round((3 + R() * 2.5) * 2) / 2 * ML_PER_OZ, minutes:20});
+      t += (night ? 3.6 : 2.6) * HOUR + R() * 50 * MIN; i++;
+    }
+  }
+  put('growth/g1', {at:addDays(today, -44) + 10 * HOUR, loggedAt:addDays(today, -44) + 10 * HOUR, by:null, grams:3430, cm:51, headCm:34.5});
+  put('growth/g2', {at:addDays(today, -30) + 10 * HOUR, loggedAt:addDays(today, -30) + 11 * HOUR, by:null, grams:3880, cm:53.3});
+  put('growth/g3', {at:addDays(today, -3) + 10 * HOUR, loggedAt:addDays(today, -3) + 11 * HOUR, by:null, grams:4720, cm:56.1, headCm:38.2});
+  put('visits/v1', {at:addDays(today, -30) + 10 * HOUR, loggedAt:addDays(today, -31) + 20 * HOUR, by:null, place:'2-week checkup', notes:'Back above birth weight. Vitamin D drops daily.', questions:[{text:'Is spit-up after bottles normal?', done:true}]});
+  put('visits/v2', {at:addDays(today, 6) + 10.5 * HOUR, loggedAt:now - 2 * DAY, by:null, place:'2-month checkup', notes:'', questions:[{text:'When should we expect a longer night stretch?', done:false}, {text:'How much formula per bottle at this age?', done:false}, {text:'Vaccine schedule for this visit', done:false}]});
+}
+
+boot();
+})();
+</script>
+
+</body>
+</html>
