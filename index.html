@@ -310,12 +310,15 @@ const volToMl = v => U.vol === 'oz' ? v * ML_PER_OZ : v;
 const mlToVol = ml => U.vol === 'oz' ? Math.round(ml / ML_PER_OZ * 100) / 100 : Math.round(ml);
 const fmtWeight = g => { if (!g) return '—'; if (U.wt === 'metric') return `${fmtN(g / 1000, 2)} kg`; const oz = g / G_PER_OZ; let lb = Math.floor(oz / 16), rem = r1(oz - lb * 16); if (rem >= 16) { lb++; rem = 0; } return `${lb} lb ${fmtN(rem)} oz`; };
 /* Spit-up sizes, with the rough volume each stands for (estimates, for comparison). */
+/* ml values are rough midpoints, used only for the estimated totals. */
 const SPIT = {
-  S: {label:'Small', ml:5, eq:'about 1 teaspoon'},
-  M: {label:'Medium', ml:15, eq:'about 1 tablespoon'},
-  L: {label:'Large', ml:30, eq:'2 tablespoons or more'}
+  S: {label:'Small', ml:4, eq:'1 teaspoon or less', note:'Normal, on the light side'},
+  M: {label:'Medium', ml:10, eq:'1 teaspoon to 1 tablespoon', note:'Normal, typical amount'},
+  L: {label:'Large', ml:30, eq:'More than 1 tablespoon', note:'Worth keeping an eye on'}
 };
-const spitEq = z => `${z.eq} (≈ ${U.vol === 'oz' ? fmtN(z.ml / ML_PER_OZ) + ' oz' : z.ml + ' ml'}${z === SPIT.L ? '+' : ''})`;
+const spitEq = z => z.eq.charAt(0).toUpperCase() + z.eq.slice(1);
+const TSP_ML = 4.93, TBSP_ML = 14.79;
+const fmtSpoons = ml => { if (!ml) return '—'; if (ml < 12) { const t = Math.max(1, Math.round(ml / TSP_ML)); return `${t} teaspoon${t === 1 ? '' : 's'}`; } const t = Math.round(ml / TBSP_ML * 2) / 2; return `${t} tablespoon${t === 1 ? '' : 's'}`; };
 const fmtLen = cm => !cm ? '—' : U.wt === 'metric' ? `${fmtN(cm)} cm` : `${fmtN(cm / CM_PER_IN, 1)} in`;
 
 /* ---------- state ---------- */
@@ -696,7 +699,7 @@ function renderTrends() {
       card('Sleep', avgOf(s => s.sleepMin) != null ? `avg ${fmtDur(avgOf(s => s.sleepMin))} / day` : '', barChart({labels, series: [{c:'--sleep', values: stats.map(s => s.sleepMin / 60)}], fmt: v => fmtN(v), avg: avgOf(s => s.sleepMin / 60)}) + `<div class="eyebrow" style="margin-top:6px">Sleep pattern</div>` + timeline(days), lg([['Hours asleep', '--sleep'], ['Feed', '--feed']])) +
       card('Tummy time', avgOf(s => s.tummyMin) != null ? `avg ${fmtDur(avgOf(s => s.tummyMin))} / day` : '', barChart({labels, series: [{c:'--tummy', values: stats.map(s => s.tummyMin)}], fmt: v => fmtN(v, 0)}), `<div class="legend"><span>Minutes per day</span></div>`) +
       card('Pumping', avgOf(s => s.pumpMl) != null ? `avg ${fmtVol(avgOf(s => s.pumpMl))} / day` : '', barChart({labels, series: [{c:'--pump', values: stats.map(s => s.pumpMl)}], fmt: volFmt}), `<div class="legend"><span>${U.vol === 'oz' ? 'Ounces' : 'Milliliters'} pumped per day</span></div>`) +
-      card('Spit-ups', avgOf(s => s.spitups) != null ? `avg ${fmtN(avgOf(s => s.spitups))} / day · ≈ ${fmtVol(avgOf(s => s.spitMl))}` : '', barChart({labels, series: [{c:'--spitup', values: stats.map(s => s.spitS)}, {c:'--diaper', values: stats.map(s => s.spitM)}, {c:'--visit', values: stats.map(s => s.spitL)}], fmt: v => String(v)}), lg([['Small', '--spitup'], ['Medium', '--diaper'], ['Large', '--visit']]) + `<div class="legend"><span>Count per day by size. Small ≈ ${fmtVol(SPIT.S.ml)}, medium ≈ ${fmtVol(SPIT.M.ml)}, large ≈ ${fmtVol(SPIT.L.ml)}+</span></div>`);
+      card('Spit-ups', avgOf(s => s.spitups) != null ? `avg ${fmtN(avgOf(s => s.spitups))} / day · about ${fmtSpoons(avgOf(s => s.spitMl))}` : '', barChart({labels, series: [{c:'--spitup', values: stats.map(s => s.spitS)}, {c:'--diaper', values: stats.map(s => s.spitM)}, {c:'--visit', values: stats.map(s => s.spitL)}], fmt: v => String(v)}), lg([['Small', '--spitup'], ['Medium', '--diaper'], ['Large', '--visit']]) + `<div class="legend"><span>Count per day by size. Small is 1 teaspoon or less, medium up to 1 tablespoon, large more than a tablespoon.</span></div>`);
   } else {
     const d = S.trendDay, st = rangeStats(d, addDays(d, 1));
     const prev = Array.from({length: 7}, (_, i) => rangeStats(addDays(d, -7 + i), addDays(d, -6 + i))).filter(hasData);
@@ -717,7 +720,7 @@ function renderTrends() {
       ${tile('Pumped', '--pump', fmtVol(st.pumpMl), prev.length ? fmtVol(pa(s => s.pumpMl)) : null)}
       ${tile('Naps & sleeps', '--sleep', st.sleeps, prev.length ? fmtN(pa(s => s.sleeps)) : null)}
       ${tile('Spit-ups', '--spitup', st.spitups + (st.spitL ? ` <span style="font-size:13px;color:var(--muted)">(${st.spitL} large)</span>` : ''), prev.length ? fmtN(pa(s => s.spitups)) : null)}
-      ${tile('Spit-up volume (est.)', '--spitup', st.spitups ? '≈ ' + fmtVol(st.spitMl) : '—', prev.length ? fmtVol(pa(s => s.spitMl)) : null)}
+      ${tile('Spit-up amount (est.)', '--spitup', st.spitups ? `<span style="font-size:17px">about ${fmtSpoons(st.spitMl)}</span>` : '—', prev.length ? fmtSpoons(pa(s => s.spitMl)) : null)}
     </div>
     <div class="panel chart"><div class="hd"><h2>The day at a glance</h2></div>${timeline([d], {big: true})}<div class="legend"><span style="--c:var(--sleep)"><i></i>Asleep</span><span style="--c:var(--feed)"><i></i>Feed</span><span style="--c:var(--wet)"><i></i>Wet</span><span style="--c:var(--dirty)"><i></i>Dirty</span></div></div>`;
   }
@@ -852,8 +855,8 @@ function openForm(type, existing, prefill = {}) {
       ${timerRow('sleep', 'Going down for a nap now?')}${fNote(e.note)}`;
   } else if (type === 'spitup') {
     body = `<div class="fld"><span>How much?</span><div style="display:grid;gap:8px">
-      ${Object.entries(SPIT).map(([k, z]) => `<button type="button" class="tbig" data-size="${k}" aria-pressed="${e.size === k}" style="--c:var(--spitup);flex-direction:row;justify-content:space-between;padding:14px 16px;text-align:left">${z.label}<small>${esc(spitEq(z))}</small></button>`).join('')}
-      </div><div class="meta">Volumes are rough estimates for comparing spit-ups, not measurements.</div></div>
+      ${Object.entries(SPIT).map(([k, z]) => `<button type="button" class="tbig" data-size="${k}" aria-pressed="${e.size === k}" style="--c:var(--spitup);flex-direction:row;justify-content:space-between;padding:14px 16px;text-align:left;gap:12px">${z.label}<small style="text-align:right;font-size:13px;color:var(--ink)">${esc(spitEq(z))}<br><span style="color:${k === 'L' ? 'var(--visit)' : 'var(--muted)'};font-size:12px">${z.note}</span></small></button>`).join('')}
+      </div><div class="meta">Amounts are rough guesses by eye. Call your pediatrician if spit-up is forceful, green or bloody, or if he seems in pain, refuses feeds or isn't gaining weight.</div></div>
       <div class="fld"><span>Forceful? <span class="hint">optional</span></span><div class="chips"><button type="button" class="chip" data-forceful aria-pressed="${!!e.forceful}" style="--c:var(--spitup)">Forceful / projectile</button></div></div>
       ${fWhen('Time', at)}${fNote(e.note)}`;
   } else if (type === 'tummy') {
