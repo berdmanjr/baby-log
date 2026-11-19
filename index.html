@@ -21,6 +21,7 @@
   --accent:#2E4F8F; --accent-ink:#FFFFFF; --danger:#B3261E; --warn-bg:#FFF4D6; --warn-ink:#6B4E00;
   --diaper:#B47D14; --feed:#2C77B8; --pump:#7E55B8; --sleep:#3B4A9A; --tummy:#2F8A5C; --visit:#B8455F; --growth:#16807F; --spitup:#C4622D;
   --wet:#3C8DD3; --dirty:#8F5E2E; --formula:#79B4DF;
+  --ok:#2F7D4F; --watch:#9A6200; --alert:#B3261E;
   --f-display:"Bricolage Grotesque", ui-rounded, system-ui, sans-serif;
   --f-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r:14px; --tabh:62px;
@@ -30,12 +31,14 @@
   --accent:#8FB0F0; --accent-ink:#0E1412; --danger:#F2867E; --warn-bg:#3A3018; --warn-ink:#F3D58A;
   --diaper:#E0B04D; --feed:#6AAEE8; --pump:#B595E6; --sleep:#9AA6F0; --tummy:#6CCB97; --visit:#EE8AA1; --growth:#5CC9C6; --spitup:#F09A66;
   --wet:#6FB2EE; --dirty:#C8955F; --formula:#A9D3F2; color-scheme:dark;
+  --ok:#6CCB97; --watch:#E9B949; --alert:#F2867E;
 }}
 :root[data-theme="dark"]{
   --bg:#0E1412; --surface:#171F1D; --surface-2:#212B28; --ink:#E6EDEA; --muted:#9AA8A4; --line:#2C3834;
   --accent:#8FB0F0; --accent-ink:#0E1412; --danger:#F2867E; --warn-bg:#3A3018; --warn-ink:#F3D58A;
   --diaper:#E0B04D; --feed:#6AAEE8; --pump:#B595E6; --sleep:#9AA6F0; --tummy:#6CCB97; --visit:#EE8AA1; --growth:#5CC9C6; --spitup:#F09A66;
   --wet:#6FB2EE; --dirty:#C8955F; --formula:#A9D3F2; color-scheme:dark;
+  --ok:#6CCB97; --watch:#E9B949; --alert:#F2867E;
 }
 *{box-sizing:border-box}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
@@ -130,6 +133,24 @@ h2{font-family:var(--f-display);font-size:18px;margin:0;letter-spacing:-.005em}
 .chart svg .grid{stroke:var(--line);stroke-width:1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+/* health check */
+.hc .hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hc .ctx{font-size:12.5px;color:var(--muted);margin-top:2px}
+.hc .verdict{margin:10px 0 4px;padding:9px 12px;border-radius:10px;font-size:14px;font-weight:600;color:var(--lc);background:color-mix(in srgb,var(--lc) 12%,transparent)}
+.hc details.hr{border-top:1px solid var(--line)}
+.hc details.hr summary{list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:3px 10px;align-items:center;padding:10px 0;cursor:pointer}
+.hc details.hr summary::-webkit-details-marker{display:none}
+.hc .lvl{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;color:var(--lc);background:color-mix(in srgb,var(--lc) 14%,transparent);justify-self:start}
+.hc .nm{font-weight:600;font-size:14.5px;min-width:0}
+.hc .val{font-size:13px;color:var(--muted);text-align:right}
+.hc .why{grid-column:1/4;font-size:13px;line-height:1.4}
+.hc .more{font-size:12.5px;line-height:1.45;color:var(--muted);padding:0 0 10px}
+.hc .more p{margin:0 0 5px}
+.hc .foot{border-top:1px solid var(--line);padding-top:10px;font-size:12px;line-height:1.45;color:var(--muted)}
+.hc .foot b{color:var(--ink)}
+.hc .foot a{color:var(--accent)}
+.hc .foot summary{cursor:pointer;color:var(--accent);margin-top:6px}
+.hc .foot ul{margin:6px 0 0;padding-left:18px}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
 .tile .k{font-size:12px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:6px}
@@ -497,7 +518,7 @@ const byName = by => by && !/^u_/.test(by) ? ` by ${by === S.me ? 'you' : by}` :
 function rangeStats(from, to) {
   const st = {wet:0, dirty:0, diapers:0, feeds:0, bottleMl:0, formulaMl:0, bottleFeeds:0, formulaFeeds:0, breastMin:0, breastFeeds:0,
     intervals:[], sleepMin:0, sleeps:0, longestSleep:0, tummyMin:0, tummies:0, pumpMl:0, pumps:0,
-    spitups:0, spitS:0, spitM:0, spitL:0, spitMl:0, forceful:0};
+    spitups:0, spitS:0, spitM:0, spitL:0, spitMl:0, forceful:0, watery:0};
   let prevFeed = null;
   for (const e of allEvents()) {
     if (e.type === 'feed') { if (prevFeed != null && e.at >= from && e.at < to) st.intervals.push((e.at - prevFeed) / MIN); prevFeed = e.at; }
@@ -507,7 +528,7 @@ function rangeStats(from, to) {
       continue;
     }
     if (e.at < from || e.at >= to) continue;
-    if (e.type === 'diaper') { st.diapers++; if (e.wet) st.wet++; if (e.dirty) st.dirty++; }
+    if (e.type === 'diaper') { st.diapers++; if (e.wet) st.wet++; if (e.dirty) st.dirty++; if (e.dirty && e.watery) st.watery++; }
     else if (e.type === 'feed') {
       st.feeds++;
       if (e.method === 'breast') { st.breastFeeds++; st.breastMin += e.minutes || 0; }
@@ -528,7 +549,7 @@ const lastOf = (pred) => { const ev = allEvents(); for (let i = ev.length - 1; i
 /* ---------- describing events ---------- */
 function describe(e) {
   switch (e.type) {
-    case 'diaper': return {t: e.wet && e.dirty ? 'Wet + dirty diaper' : e.dirty ? 'Dirty diaper' : 'Wet diaper'};
+    case 'diaper': return {t: (e.wet && e.dirty ? 'Wet + dirty diaper' : e.dirty ? 'Dirty diaper' : 'Wet diaper') + (e.dirty && e.watery ? ' · watery' : '')};
     case 'feed':
       if (e.method === 'breast') return {t: `Breastfed · ${fmtDur(e.minutes)}`, s: e.side ? ({L:'Left side', R:'Right side', B:'Both sides'}[e.side]) : ''};
       return {t: `${e.method === 'formula' ? 'Formula' : 'Bottle'} · ${fmtVol(e.ml)}`, s: e.method === 'formula' ? '' : 'Breast milk'};
@@ -724,8 +745,285 @@ function renderTrends() {
     </div>
     <div class="panel chart"><div class="hd"><h2>The day at a glance</h2></div>${timeline([d], {big: true})}<div class="legend"><span style="--c:var(--sleep)"><i></i>Asleep</span><span style="--c:var(--feed)"><i></i>Feed</span><span style="--c:var(--wet)"><i></i>Wet</span><span style="--c:var(--dirty)"><i></i>Dirty</span></div></div>`;
   }
+  el.insertAdjacentHTML('afterbegin', healthHTML());
 }
 const hasData = s => s.diapers || s.feeds || s.sleepMin || s.tummies || s.pumps || s.spitups;
+
+/* ---------- health check: how he's tracking against published guidance ----------
+   Every cutoff below comes from a source listed in HC_SOURCES. Where no source gives a
+   number, the row shows the value with no colour ("none"). */
+/* WHO weight-for-age, boys, L/M/S by completed month 0–24 (CDC's copy of the WHO table). */
+const WFA = [[0.3487,3.3464,0.14602],[0.2297,4.4709,0.13395],[0.197,5.5675,0.12385],[0.1738,6.3762,0.11727],[0.1553,7.0023,0.11316],[0.1395,7.5105,0.1108],[0.1257,7.934,0.10958],[0.1134,8.297,0.10902],[0.1021,8.6151,0.10882],[0.0917,8.9014,0.10881],[0.082,9.1649,0.10891],[0.073,9.4122,0.10906],[0.0644,9.6479,0.10925],[0.0563,9.8749,0.10949],[0.0487,10.0953,0.10976],[0.0413,10.3108,0.11007],[0.0343,10.5228,0.11041],[0.0275,10.7319,0.11079],[0.0211,10.9385,0.11119],[0.0148,11.143,0.11164],[0.0087,11.3462,0.11211],[0.0029,11.5486,0.11261],[-0.0028,11.7504,0.11314],[-0.0083,11.9514,0.11369],[-0.0137,12.1515,0.11426]];
+/* WHO 1-month weight increments, boys: [from day, to day, 5th, 15th, 95th percentile gain in grams]. */
+const WVEL = [[0,28,460,681,1509],[28,61,713,886,1724],[61,91,446,577,1228],[91,122,285,403,985],[122,152,194,311,883],[152,183,103,217,773],[183,213,42,154,706],[213,243,-1,111,671],[243,274,-36,77,646],[274,304,-66,48,627],[304,335,-89,27,623],[335,366,-106,15,635]];
+const lmsAt = days => { const m = Math.max(0, Math.min(24, days / 30.4375)), i = Math.min(23, Math.floor(m)), f = m - i; return WFA[i].map((v, k) => v + (WFA[i + 1][k] - v) * f); };
+const zOf = (g, days) => { const [L, M, s] = lmsAt(days); return (Math.pow(g / 1000 / M, L) - 1) / (L * s); };
+const gAtZ = (z, days) => { const [L, M, s] = lmsAt(days); return 1000 * M * Math.pow(1 + L * s * z, 1 / L); };
+const pctOf = z => { const x = Math.abs(z) / Math.SQRT2, t = 1 / (1 + 0.3275911 * x), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return 50 * (1 + Math.sign(z) * y); };
+const ordinal = n => n + ((n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({1:'st', 2:'nd', 3:'rd'}[n % 10] || 'th'));
+const fmtPct = p => p < 1 ? 'below the 1st percentile' : p > 99 ? 'above the 99th percentile' : `${ordinal(Math.round(p))} percentile`;
+const fmtGain = gpd => U.wt === 'metric' ? `${gpd >= 0 ? '+' : '−'}${Math.round(Math.abs(gpd))} g/day` : `${gpd >= 0 ? '+' : '−'}${fmtN(Math.abs(gpd) * 7 / G_PER_OZ)} oz/week`;
+const birthTime = () => { const b = S.settings.birth; if (!b) return null; const t = new Date(b + 'T00:00').getTime(); return isFinite(t) ? t : null; };
+const LV = {alert:3, watch:2, ok:1, info:0, none:0};
+const LVW = {ok:'On track', watch:'Keep an eye', alert:'Call doctor', info:'For reference', none:'Not enough data'};
+const LVC = {ok:'--ok', watch:'--watch', alert:'--alert', info:'--muted', none:'--muted'};
+const HC_SOURCES = [
+  ['AAP: Breastfeeding questions (diapers, stools, feeds, waking to feed)', 'https://www.healthychildren.org/English/tips-tools/symptom-checker/Pages/symptomviewer.aspx?symptom=Breast-Feeding+Questions'],
+  ['AAP: Bottle-feeding (formula) questions', 'https://www.healthychildren.org/English/tips-tools/symptom-checker/Pages/symptomviewer.aspx?symptom=Bottle-Feeding+%28Formula%29+Questions'],
+  ['AAP: Amount and schedule of formula feedings (2½ oz per lb, 32 oz max)', 'https://www.healthychildren.org/English/ages-stages/baby/formula-feeding/Pages/amount-and-schedule-of-formula-feedings.aspx'],
+  ['AAP: Bottle feeding basics (over 36 oz a day: talk to your doctor)', 'https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/Bottle-Feeding-How-Its-Done.aspx'],
+  ['AAP: Diarrhea (0–12 months)', 'https://www.healthychildren.org/English/tips-tools/symptom-checker/Pages/symptomviewer.aspx?symptom=Diarrhea+(0-12+Months)'],
+  ['AAP: Spitting up (reflux)', 'https://www.healthychildren.org/English/tips-tools/symptom-checker/Pages/symptomviewer.aspx?symptom=Spitting+Up+-+Reflux'],
+  ['AAP: Signs of dehydration', 'https://www.healthychildren.org/English/health-issues/injuries-emergencies/Pages/dehydration.aspx'],
+  ['AAP: First month growth (back to birth weight by ~2 weeks)', 'https://www.healthychildren.org/English/ages-stages/baby/Pages/First-Month-Physical-Appearance-and-Growth.aspx'],
+  ['AAP: Back to sleep, tummy to play', 'https://www.healthychildren.org/English/ages-stages/baby/sleep/Pages/back-to-sleep-tummy-to-play.aspx'],
+  ['WHO: Weight-for-age standards (percentiles)', 'https://www.who.int/tools/child-growth-standards/standards/weight-for-age'],
+  ['WHO: Weight velocity standards (expected gain per month)', 'https://www.who.int/tools/child-growth-standards/standards/weight-velocity'],
+  ['AASM consensus, endorsed by AAP: 12–16 h sleep at 4–12 months', 'https://aasm.org/resources/pdf/pediatricsleepdurationconsensus.pdf'],
+  ['National Sleep Foundation: newborn sleep (no medical target under 4 months)', 'https://www.sleepfoundation.org/children-and-sleep/how-much-sleep-do-kids-need']
+];
+
+/* Best estimate of today's weight: a recent weigh-in, or an older one carried forward along his WHO percentile. */
+function estWeight(now, bt) {
+  const w = [...S.growth].reverse().find(x => x.grams && x.at <= now + MIN); if (!w) return null;
+  const ago = (now - w.at) / DAY, wa = (w.at - bt) / DAY, A = (now - bt) / DAY;
+  if (ago <= 7) return {g: w.grams, w, projected: false};
+  if (ago <= 60 && wa >= 14) return {g: gAtZ(zOf(w.grams, wa), A), w, projected: true};
+  return {g: null, w, stale: true};
+}
+
+function healthCheck() {
+  const now = Date.now(), bt = birthTime();
+  if (bt == null || bt > now) return {needs: 'birth'};
+  const A = (now - bt) / DAY;  // days old (fractional)
+  if (A > 366) return {tooOld: true};
+  ensureMonthsBack(now - 9 * DAY);
+  const ev = allEvents(); const first = ev.length ? ev[0].at : null;
+  const loggedH = first == null ? 0 : (now - first) / HOUR;
+  const full24 = loggedH >= 24;
+  const st = rangeStats(now - DAY, now);
+  const prior = []; for (let i = 1; i <= 7; i++) { const a = now - (i + 1) * DAY; if (first != null && a >= first) prior.push(rangeStats(a, a + DAY)); }
+  const pAvg = f => prior.length >= 3 ? prior.reduce((s, x) => s + f(x), 0) / prior.length : null;
+  const endOf = e => e.type === 'sleep' ? e.at + (e.minutes || 0) * MIN : e.at;
+  const lastAny = ev.length ? Math.max(...ev.slice(-30).map(endOf)) : null;
+  const activeNow = lastAny != null && now - lastAny < 3 * HOUR;
+  const lastWet = lastOf(e => e.type === 'diaper' && e.wet), lastDirty = lastOf(e => e.type === 'diaper' && e.dirty);
+  const s3 = rangeStats(now - 3 * DAY, now);
+  const formula = s3.formulaFeeds > s3.breastFeeds + s3.bottleFeeds;  // mostly formula vs mostly breast milk
+  const est = estWeight(now, bt);
+  const items = [];
+  const add = (key, name, c, r) => items.push({key, name, c, ...r});
+  const notYet = `Needs a full day of logging${first ? ` (you started ${fmtAgo(first)})` : ''}.`;
+  const worst = rs => rs.reduce((a, r) => LV[r.lvl] >= LV[a.lvl] ? r : a, {lvl: 'none'});  // ties: the later, more specific reason wins
+
+  /* Wet diapers: AAP looks for 6+ a day from day 5; no urine in 8+ hours is a dehydration sign. */
+  {
+    const val = full24 ? `${st.wet} in 24 h` : `${st.wet} so far`;
+    const dry = lastWet ? (now - lastWet.at) / HOUR : loggedH;
+    let r;
+    if (dry > 8 && loggedH > 8 && activeNow) r = {lvl:'alert', why:`No wet diaper logged in ${fmtDur(dry * 60)}.`, more:'AAP: no urine in more than 8 hours can mean dehydration, so call your pediatrician now. If you just missed logging one, log it and this clears.'};
+    else if (!full24) r = {lvl:'none', why: notYet};
+    else if (A < 4) { const need = Math.min(3, Math.floor(A) + 1); r = st.wet >= need ? {lvl:'ok', why:'Normal for the first days.'} : {lvl:'watch', why:`Fewer than ${need} in the last day.`}; r.more = 'While milk comes in (first 4 days), fewer wet diapers are normal; AAP says 3 a day can be normal. From day 5, look for 6 or more.'; }
+    else if (st.wet >= 6) r = {lvl:'ok', why:'6 or more a day is what AAP looks for.'};
+    else if (st.wet >= 4) r = {lvl:'watch', why:'Below the 6 a day AAP looks for.', more:'Double-check every diaper got logged. If it really is under 6 a day, AAP says to call your pediatrician within 24 hours.'};
+    else r = {lvl:'alert', why:'Well below the 6 a day AAP looks for.', more:'Very few wet diapers can mean dehydration. If you logged every diaper, call your pediatrician.'};
+    add('wet', 'Wet diapers', '--wet', {val, ...r});
+  }
+
+  /* Dirty diapers: day-of-life stool counts (breast milk), formula patterns, and diarrhea (watery stools). */
+  {
+    const rs = [], dol = Math.floor(A) + 1;
+    const noStoolH = lastDirty ? (now - lastDirty.at) / HOUR : loggedH;
+    const covered = h => loggedH >= h;
+    if (dol === 1) rs.push({lvl:'info', why:'First day. Poops pick up from day 2.'});
+    else if (dol <= 4) {
+      if (noStoolH > 24 && covered(24)) rs.push({lvl:'alert', why:'No poop in over 24 hours on day 2–4.', more:'AAP: on days 2–4, no stool in more than 24 hours means call your pediatrician within 24 hours.'});
+      else rs.push({lvl:'ok', why:'Days 2–3 usually bring 1–2 a day, rising to 3+ by day 5.'});
+    } else if (!formula && A < 28) {
+      if (!full24) rs.push({lvl:'none', why: notYet});
+      else if (st.dirty >= 3) rs.push({lvl:'ok', why:'3 or more a day is what AAP looks for in the first month.'});
+      else if (st.dirty === 2) rs.push({lvl:'watch', why:'Below the 3 a day AAP looks for in the first month.', more:'For breast-milk-fed babies, AAP uses poops as the best sign of how much milk he is getting. Under 3 a day (after day 5) means call your pediatrician within 24 hours if it continues.'});
+      else rs.push({lvl:'alert', why:`Only ${st.dirty} in the last day.`, more:'AAP: in the first month, fewer than 3 poops a day (after day 5) means call your pediatrician within 24 hours. Stool count is the best sign of how much breast milk he is getting.'});
+    } else if (!full24) rs.push({lvl:'none', why: notYet});
+    else if (!formula) {
+      if (noStoolH > 7 * 24 && covered(7 * 24)) rs.push({lvl:'watch', why:`No poop in ${Math.floor(noStoolH / 24)} days.`, more:'AAP: after 4–8 weeks some breastfed babies go 4–7 days between poops, which is fine if they are soft and passed without pain. Longer than that, check with your pediatrician.'});
+      else rs.push({lvl:'ok', why:'After a month, breastfed babies can go days between poops.', more:'AAP: some breastfed babies switch to one large soft poop every 4–7 days. That is normal if he is feeding well and not straining in pain.'});
+    } else if (A < 61) {
+      if (!full24) rs.push({lvl:'none', why: notYet});
+      else if (st.dirty >= 1) rs.push({lvl:'ok', why:'Formula-fed babies usually go 1–4 times a day until 2 months.'});
+      else rs.push({lvl:'watch', why:'No poop in the last day.', more:'AAP: formula-fed babies usually poop 1–4 times a day until 2 months. One quiet day is not an emergency, but watch for hard stools or straining.'});
+    } else {
+      if (noStoolH > 48 && covered(48)) rs.push({lvl:'watch', why:`No poop in ${Math.floor(noStoolH / 24)} days.`, more:'AAP: after 2 months most formula-fed babies poop 1–2 times a day or every other day.'});
+      else rs.push({lvl:'ok', why:'After 2 months, 1–2 a day or every other day is typical.'});
+    }
+    const W = st.watery;
+    if (W >= 10) rs.push({lvl:'alert', why:`${W} watery poops in 24 h.`, more:'AAP: 10 or more watery stools in 24 hours is severe diarrhea. Call your pediatrician now.'});
+    else if (A < 28 && W >= 3) rs.push({lvl:'alert', why:`${W} watery poops in 24 h, under 1 month old.`, more:'AAP: under 1 month with 3 or more diarrhea stools in 24 hours, call your pediatrician now.'});
+    else if (W >= 6) rs.push({lvl:'alert', why:`${W} watery poops in 24 h.`, more:'AAP: 6 or more watery stools in 24 hours, call your pediatrician within 24 hours.'});
+    else if (W >= 3) rs.push({lvl:'watch', why:`${W} watery poops in 24 h counts as diarrhea.`, more:'AAP defines diarrhea as 3 or more watery or very loose stools. Watch wet diapers closely; call at 6 or more watery stools in 24 hours.'});
+    const pd = pAvg(x => x.dirty);
+    if (full24 && pd != null && W < 3 && st.dirty >= 2 * pd && st.dirty >= pd + 3) rs.push({lvl:'watch', why:`More than his usual (about ${fmtN(pd)} a day).`, more:'AAP describes diarrhea as a sudden jump in how many poops there are and how loose they are. If these are watery, tap "Watery / loose" when you log them so this check can tell.'});
+    const r = worst(rs); const moreAll = rs.filter(x => x.more && x !== r).map(x => x.more);
+    add('dirty', 'Dirty diapers', '--dirty', {val: full24 ? `${st.dirty} in 24 h${W ? ` · ${W} watery` : ''}` : `${st.dirty} so far`, ...r, more: [r.more, ...moreAll].filter(Boolean).join(' ')});
+  }
+
+  /* Feeds per day: AAP 8–12 in the first month (breast milk), at least 8 for bottle-fed newborns. */
+  {
+    const val = full24 ? `${st.feeds} in 24 h${st.avgInterval ? ` · every ${fmtDur(st.avgInterval)}` : ''}` : `${st.feeds} so far`;
+    let r;
+    if (!full24) r = {lvl:'none', why: notYet};
+    else if (A < 28 && !formula) r = st.feeds < 8 ? {lvl:'watch', why:'Below the 8–12 a day AAP expects in the first month.', more:'Breastfed newborns usually nurse 8–12 times in 24 hours. Fewer can mean he is not getting enough; watch his wet and dirty diapers.'}
+      : st.feeds > 12 ? {lvl:'watch', why:'More than the usual 8–12 a day.', more:'Often cluster feeding or a growth spurt. It is fine if wet and dirty diapers and weight gain look good.'}
+      : {lvl:'ok', why:'Within the 8–12 a day AAP expects in the first month.'};
+    else if (A < 28) r = st.feeds < 8 ? {lvl:'watch', why:'Below the 8 a day AAP recommends for bottle-fed newborns.', more:'AAP: most newborns eat every 2 to 3 hours, and 8 times in 24 hours is the usual minimum.'} : {lvl:'ok', why:'At least the 8 a day AAP recommends for newborns.'};
+    else r = {lvl:'info', why:'Feeds space out as he grows. There is no firm count after the first month.', more:'Use wet diapers, the bottle total (if bottle-fed) and weight gain as the check instead.'};
+    add('feeds', 'Feeds', '--feed', {val, ...r});
+  }
+
+  /* Longest stretch without a feed (first month): AAP says wake to feed after 3 h by day, 4 h at night. */
+  if (A < 28) {
+    const feeds = ev.filter(e => e.type === 'feed' && e.at >= now - DAY && e.at <= now + MIN);
+    const prevFeed = lastOf(e => e.type === 'feed' && e.at < now - DAY);
+    const pts = (prevFeed ? [prevFeed.at] : []).concat(feeds.map(e => e.at));
+    let worstGap = null;
+    for (let i = 0; i < pts.length; i++) {
+      const s = pts[i], e = i + 1 < pts.length ? pts[i + 1] : now, h = new Date(s).getHours();
+      const lim = h >= 7 && h < 21 ? 3 : 4, len = (e - s) / HOUR, over = len - lim;
+      if (!worstGap || over > worstGap.over) worstGap = {s, len, lim, over, open: i + 1 === pts.length};
+    }
+    let r;
+    if (!worstGap) r = {lvl:'none', why:'No feeds logged in the last day.'};
+    else if (worstGap.len > 8) r = {lvl:'alert', why:`${fmtDur(worstGap.len * 60)} without a logged feed.`, more:'AAP: a newborn who will not feed, or takes very little, for more than 8 hours needs a call to your pediatrician now. If he did eat and it just was not logged, log it and this clears.'};
+    else if (worstGap.over > 0) r = {lvl:'watch', why:`${worstGap.open ? 'It has been' : 'One stretch was'} ${fmtDur(worstGap.len * 60)}${worstGap.open ? ' since his last feed' : ` (from ${fmtTime(worstGap.s)})`}.`, more:`AAP: in the first month, wake him to feed if more than 3 hours pass during the day or 4 hours at night. This stretch started ${worstGap.lim === 3 ? 'during the day' : 'at night'}.`};
+    else r = {lvl:'ok', why:'No stretch longer than AAP\'s 3 h (day) or 4 h (night) limit.'};
+    add('gap', 'Longest gap between feeds', '--feed', {val: worstGap ? fmtDur(worstGap.len * 60) : '—', ...r});
+  }
+
+  /* Bottle + formula total: AAP ~2½ oz per lb a day, usually no more than 32 oz; over 36 oz, talk to the doctor. */
+  {
+    const T = est && est.g ? Math.min(2.5 * ML_PER_OZ * est.g / 453.592, 32 * ML_PER_OZ) : null;
+    const hi = T != null ? Math.min(1.2 * T, 32 * ML_PER_OZ) : null, lo = T != null ? 0.8 * T : null;
+    const val = st.intakeMl ? `${fmtVol(st.intakeMl)}${T && !st.breastFeeds && A < 183 ? ` · aim ~${fmtVol(T)}` : ''}` : '—';
+    let r;
+    if (!st.intakeMl && !st.feeds) r = {lvl:'none', why: full24 ? 'No feeds logged in the last day.' : notYet};
+    else if (st.intakeMl > 36 * ML_PER_OZ && full24) r = {lvl:'alert', why:'More than 36 oz in a day.', more:'AAP: it is rare for a baby to need more than 36 oz a day. Talk to your pediatrician; he may be getting more than he needs.'};
+    else if (st.breastFeeds) r = {lvl:'info', why:'He also breastfed, so the bottle total is not everything he ate.', more:'With breastfeeds in the mix, wet and dirty diapers and weight gain are the better check.'};
+    else if (A < 4) r = {lvl:'info', why:'Amounts ramp up fast in the first days. Follow your pediatrician\'s plan.', more:'AAP: newborns usually take 1–2 oz per feed after the first day or two.'};
+    else if (A >= 183) r = st.intakeMl > 32 * ML_PER_OZ && full24 ? {lvl:'watch', why:'Above the 32 oz a day AAP sets as the usual most.'} : {lvl:'info', why:'After 6 months solids change how much milk he needs.', more:'AAP: around 6 months, typically 6–8 oz at each of 4–5 feeds, and usually no more than 32 oz a day.'};
+    else if (!est || !est.g) r = {lvl:'none', why: est && est.stale ? 'Last weight is too old to set a target. Log a new weigh-in.' : 'Log his weight to get a daily target.'};
+    else if (!full24) r = {lvl:'none', why: notYet};
+    else if (st.intakeMl > hi) r = {lvl:'watch', why:`Above about ${fmtVol(hi)} a day, so he may be getting more than he needs.`, more:`AAP: babies take about 2½ oz per pound a day (about ${fmtVol(T)} at ${fmtWeight(est.g)}), and usually no more than 32 oz. Signs of too much: lots of spit-up, fussiness after feeds, very fast weight gain.`};
+    else if (st.intakeMl < lo) r = {lvl:'watch', why:`Below about ${fmtVol(lo)} a day.`, more:`AAP: babies take about 2½ oz per pound a day (about ${fmtVol(T)} at ${fmtWeight(est.g)}). A low day is fine if wet diapers and weight gain look good. The green band here is within about 20% of AAP's average.`};
+    else r = {lvl:'ok', why:`Close to AAP's 2½ oz per pound a day (about ${fmtVol(T)}).`, more:`Green band: ${fmtVol(lo)}–${fmtVol(hi)}, within about 20% of AAP's average, capped at the 32 oz AAP sets as the usual most.`};
+    if (est && est.projected && r.more !== undefined) r.more += ` Weight used: about ${fmtWeight(est.g)}, carried forward from the ${fmtDate(est.w.at, {month:'short', day:'numeric'})} weigh-in along his percentile.`;
+    add('intake', 'Bottle + formula', '--formula', {val, ...r});
+  }
+
+  /* Weight: WHO percentile, birth-weight rules for the first weeks, WHO gain-per-month percentiles after. */
+  {
+    const ws = S.growth.filter(x => x.grams && x.at <= now + MIN);
+    const w = ws[ws.length - 1];
+    if (!w) add('weight', 'Weight', '--growth', {lvl:'none', val:'—', why:'Log a weigh-in (the Weight button) to check growth.'});
+    else {
+      const rs = [], wa = (w.at - bt) / DAY;
+      const bg = S.settings.birthGrams || (S.growth.find(x => x.grams && x.at < bt + DAY) || {}).grams || null;
+      const z = zOf(w.grams, Math.max(0, wa)), p = pctOf(z);
+      const pctTxt = `${fmtPct(p)} for his age (WHO)`;
+      if (wa < 14) rs.push({lvl:'info', why: pctTxt + '.', more:'Percentiles dip in the first two weeks while babies lose and regain weight.'});
+      else if (z < -3) rs.push({lvl:'alert', why:`Far below the usual range: ${pctTxt}.`, more:'WHO treats weight more than 3 standard deviations below the median as severely low. Talk to your pediatrician.'});
+      else if (z < -2) rs.push({lvl:'watch', why:`Below the 2nd percentile line: ${pctTxt}.`, more:'WHO uses this line as its cutoff for low weight-for-age. Many small babies are healthy if they follow their own curve; ask your pediatrician.'});
+      else rs.push({lvl:'ok', why:`${pctTxt[0].toUpperCase()}${pctTxt.slice(1)}.`, more:'Anywhere inside the normal curves is fine. Following his own line matters more than the number.'});
+      if (bg) {
+        const loss = (bg - w.grams) / bg * 100;
+        if (wa <= 14) {
+          if (loss > 10) rs.push({lvl:'alert', why:`Down ${fmtN(loss)}% from birth weight.`, more:'AAP: newborns should lose no more than 8–10% of birth weight in the first days, and more than 10% needs to be checked. Call your pediatrician.'});
+          else if (loss > 8) rs.push({lvl:'watch', why:`Down ${fmtN(loss)}% from birth weight.`, more:'AAP: newborns should lose no more than 8–10% of birth weight in the first days. Keep feeding often and recheck soon.'});
+          else if (loss > 0) rs.push({lvl:'ok', why:`Down ${fmtN(loss)}% from birth weight, inside the usual dip.`, more:'All newborns lose some weight in the first week and are usually back to birth weight by about 2 weeks.'});
+          else rs.push({lvl:'ok', why: wa < 2 ? 'At birth weight.' : 'Back to birth weight or above.'});
+        } else if (w.grams < bg) rs.push(wa <= 21
+          ? {lvl:'watch', why:'Not yet back to birth weight.', more:'AAP: babies should be back to birth weight by about 2 weeks, and almost all are by 3 weeks.'}
+          : {lvl:'alert', why:'Still below birth weight after 3 weeks.', more:'AAP: almost all babies are back to birth weight by 3 weeks. Call your pediatrician.'});
+      }
+      const prevW = [...ws].reverse().find(x => x.at <= w.at - 14 * DAY) || [...ws].reverse().find(x => x.at <= w.at - 7 * DAY);
+      let gainTxt = '';
+      if (prevW) {
+        const pa = (prevW.at - bt) / DAY, span = (w.at - prevW.at) / DAY, gpd = (w.grams - prevW.grams) / span;
+        gainTxt = fmtGain(gpd);
+        const inDip = pa >= 1 && pa < 14;
+        if (!inDip) {
+          const mid = (pa + wa) / 2, row = WVEL.find(r => mid < r[1]) || WVEL[WVEL.length - 1], len = row[1] - row[0];
+          const p5 = row[2] / len, p15 = row[3] / len, p95 = row[4] / len, sure = span >= 21;
+          const since = `since ${fmtDate(prevW.at, {month:'short', day:'numeric'})}`;
+          if (gpd < 0 && wa > 14) rs.push({lvl: span >= 14 ? 'alert' : 'watch', why:`Lost weight ${since}.`, more:'Weight loss after the first 2 weeks is a reason to call your pediatrician (CDC lists continued weight loss after day 5 as a sign he may not be getting enough).'});
+          else if (gpd < p5) rs.push({lvl: sure ? 'alert' : 'watch', why:`Gaining slowly: ${gainTxt} ${since}.`, more:`Slower than 95% of babies his age in the WHO growth standards (about ${fmtGain(p5)} or more is typical).${sure ? '' : ' The weigh-ins are less than 3 weeks apart, so this is rough; home scales can be off.'} AAP lists poor weight gain as a reason to call within 24 hours.`});
+          else if (gpd < p15) rs.push({lvl:'watch', why:`On the slow side: ${gainTxt} ${since}.`, more:`Slower than 85% of babies his age in the WHO growth standards (${fmtGain(p15)} or more). Often fine, especially if his percentile is steady; mention it at the next visit.`});
+          else if (gpd > p95) rs.push({lvl:'watch', why:`Gaining fast: ${gainTxt} ${since}.`, more:`Faster than 95% of babies his age in the WHO growth standards (about ${fmtGain(p95)}). Usually fine; mention it at the next visit, especially if bottle totals run high.`});
+          else rs.push({lvl:'ok', why:`Healthy gain: ${gainTxt} ${since}.`, more:`Within the normal WHO range for his age (roughly ${fmtGain(p15)} to ${fmtGain(p95)}).`});
+        }
+      }
+      const r = worst(rs); const others = rs.filter(x => x !== r).map(x => x.why);
+      const staleNote = now - w.at > 30 * DAY ? ` Last weigh-in was ${Math.round((now - w.at) / DAY)} days ago; a fresh one keeps this accurate.` : '';
+      add('weight', 'Weight', '--growth', {lvl: r.lvl, val: `${fmtWeight(w.grams)} · ${fmtDate(w.at, {month:'short', day:'numeric'})}`, why: r.why, more: [r.more, others.length ? 'Also: ' + others.join(' ') : '', staleNote].filter(Boolean).join(' ')});
+    }
+  }
+
+  /* Spit-up: forceful under 12 weeks = call now (AAP); large ones and a rising count are worth watching. */
+  {
+    const rs = [];
+    if (st.forceful && A < 84) rs.push({lvl:'alert', why:`Forceful spit-up under 12 weeks old.`, more:'AAP: under 12 weeks, if spitting up changes to forceful (projectile) vomiting, call your pediatrician now.'});
+    else if (st.forceful >= 3) rs.push({lvl:'alert', why:`${st.forceful} forceful spit-ups in 24 h.`, more:'AAP: vomiting 3 or more times is a reason to call your pediatrician now.'});
+    else if (st.forceful) rs.push({lvl:'watch', why:'Forceful spit-up in the last day.', more:'Watch whether it repeats. At 3 or more times, AAP says to call.'});
+    if (st.spitL) rs.push({lvl:'watch', why:`${st.spitL} large spit-up${st.spitL === 1 ? '' : 's'} (more than a tablespoon).`, more:'AAP calls 1–2 mouthfuls normal. Big ones are worth watching, especially with fussiness, frequent crying or slow weight gain.'});
+    const pa = pAvg(x => x.spitups);
+    if (pa != null && st.spitups >= 2 * pa && st.spitups >= pa + 3) rs.push({lvl:'watch', why:`More than his usual (about ${fmtN(pa)} a day).`, more:'AAP: spitting up that keeps getting worse is worth raising with your pediatrician.'});
+    if (!rs.length) rs.push(full24 || st.spitups ? {lvl:'ok', why: st.spitups ? 'Normal amounts. About half of babies spit up.' : 'None logged.', more:'AAP: spit-up of 1–2 mouthfuls is normal and usually eases by about 7 months. Call right away for green or bloody spit-up.'} : {lvl:'none', why: notYet});
+    const r = worst(rs);
+    add('spit', 'Spit-up', '--spitup', {val: `${st.spitups}${full24 ? ' in 24 h' : ' so far'}${st.spitL ? ` · ${st.spitL} large` : ''}`, ...r, more: [r.more, ...rs.filter(x => x !== r).map(x => x.why)].filter(Boolean).join(' ')});
+  }
+
+  /* Sleep and tummy time: averages over the last 3 fully logged days. */
+  {
+    const t0 = sod(now), days = [];
+    for (let i = 1; i <= 3; i++) { const d = addDays(t0, -i); if (first != null && d >= first) days.push(rangeStats(d, addDays(d, 1))); }
+    const n = days.length, avg = f => n ? days.reduce((s, x) => s + f(x), 0) / n : null;
+    const sl = avg(x => x.sleepMin), naps = days.filter(x => x.sleeps).length;
+    let r;
+    if (!n || !naps) r = {lvl:'none', why: n ? 'No sleep logged on recent full days.' : 'Needs a full day of logging.'};
+    else if (A < 122) r = {lvl:'info', why:'No medical target under 4 months.', more:'The National Sleep Foundation says newborns often sleep 14–17 hours a day, but AAP and the sleep-medicine society give no target under 4 months. Logged sleep reads low if naps were missed.'};
+    else if (sl / 60 >= 12 && sl / 60 <= 16) r = {lvl:'ok', why:'Within the 12–16 h a day recommended at 4–12 months.'};
+    else r = {lvl:'watch', why:`${sl / 60 < 12 ? 'Below' : 'Above'} the 12–16 h a day recommended at 4–12 months.`, more:'AASM (endorsed by AAP): 12–16 hours per 24 including naps. If some naps did not get logged, this will read low.'};
+    add('sleep', 'Sleep', '--sleep', {val: sl != null && naps ? `${fmtDur(sl)} / day` : '—', ...r, more: r.more ? r.more + ` Average of the last ${n} full day${n === 1 ? '' : 's'}.` : `Average of the last ${n} full day${n === 1 ? '' : 's'}.`});
+    const tm = avg(x => x.tummyMin), ts = avg(x => x.tummies);
+    let t;
+    if (!n) t = {lvl:'none', why:'Needs a full day of logging.'};
+    else if (A < 49) t = ts >= 2 ? {lvl:'ok', why:'At least 2 short sessions a day, as AAP suggests early on.'} : {lvl:'watch', why:'Fewer than 2 sessions a day.', more:'AAP: start with 2–3 short sessions (3–5 minutes) a day from the day he comes home, building up to 15–30 minutes a day by 7 weeks. Always with an awake adult watching.'};
+    else t = tm >= 15 ? {lvl:'ok', why:'At least the 15–30 min a day AAP suggests by 7 weeks.'} : {lvl:'watch', why:'Under the 15–30 min a day AAP suggests by 7 weeks.', more:'Short sessions add up. Always with an awake adult watching.'};
+    add('tummy', 'Tummy time', '--tummy', {val: n ? `${fmtDur(tm)} · ${fmtN(ts)}×/day` : '—', ...t, more: (t.more ? t.more + ' ' : '') + `Average of the last ${n} full day${n === 1 ? '' : 's'}.`});
+  }
+  return {items, A, est, full24, quiet: lastAny != null && now - lastAny > 6 * HOUR ? now - lastAny : null};
+}
+
+function healthHTML() {
+  const h = healthCheck(), nm = esc(babyName());
+  const foot = `<div class="foot">A sanity check on what you've logged, using AAP, WHO and sleep-medicine guidance. It is not a diagnosis, and missed entries can make things look worse than they are. <b>Call right away, whatever this says, for a fever of 100.4°F (38°C) or more under 12 weeks, green or bloody spit-up, or if he is hard to wake, too weak to suck, or not drinking.</b>
+    <details><summary>Where these numbers come from</summary><ul>${HC_SOURCES.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join('')}</ul></details></div>`;
+  const wrap = inner => `<div class="panel hc">${inner}${foot}</div>`;
+  if (h.needs) return wrap(`<div class="hd"><h2>How ${nm} is tracking</h2></div><p class="meta" style="margin:6px 0 10px">Add his birth date in Settings, so each check can use the right range for his age.</p><button class="btn" data-opensettings style="margin-bottom:12px">Open Settings</button>`);
+  if (h.tooOld) return wrap(`<div class="hd"><h2>How ${nm} is tracking</h2></div><p class="meta" style="margin:6px 0 10px">These checks cover the first year. After that, your pediatrician's guidance is the better guide.</p>`);
+  const its = h.items, nA = its.filter(i => i.lvl === 'alert'), nW = its.filter(i => i.lvl === 'watch'), nO = its.filter(i => i.lvl === 'ok');
+  const verdict = nA.length ? ['--alert', `Call your pediatrician about: ${nA.map(i => i.name.toLowerCase()).join(', ')}`]
+    : nW.length ? ['--watch', `${nW.length} thing${nW.length === 1 ? '' : 's'} to keep an eye on${nO.length ? `, ${nO.length} on track` : ''}`]
+    : !h.full24 ? ['--muted', 'Still building up a day of logs. Most checks fill in after 24 hours.']
+    : nO.length ? ['--ok', `Everything checked is on track`] : ['--muted', 'Not enough logged yet to check'];
+  const ctx = [age(), h.est && h.est.g ? `weight ${h.est.projected ? 'about ' : ''}${fmtWeight(h.est.g)}` : 'no recent weight'].filter(Boolean).join(' · ');
+  if (!S.hcOpen) S.hcOpen = new Set();
+  const order = its.slice().sort((a, b) => LV[b.lvl] - LV[a.lvl]);
+  return wrap(`<div class="hd"><h2>How ${nm} is tracking</h2><span class="meta">Last 24 hours</span></div>
+    <div class="ctx">${esc(ctx)}</div>
+    <div class="verdict" style="--lc:var(${verdict[0]})">${esc(verdict[1])}</div>
+    ${h.quiet ? `<div class="meta" style="margin:4px 0">Nothing logged in the last ${fmtDur(h.quiet / MIN)}, so the counts may read low.</div>` : ''}
+    ${order.map(i => `<details class="hr" data-hk="${i.key}" ${S.hcOpen.has(i.key) ? 'open' : ''} style="--lc:var(${LVC[i.lvl]})"><summary><span class="lvl">${LVW[i.lvl]}</span><span class="nm">${esc(i.name)}</span><span class="val num">${esc(i.val)}</span><span class="why">${esc(i.why)}</span></summary>${i.more ? `<div class="more"><p>${esc(i.more)}</p></div>` : ''}</details>`).join('')}`);
+}
 
 function renderVisit() {
   const el = $('#view-visit'); const now = Date.now();
@@ -827,7 +1125,9 @@ function openForm(type, existing, prefill = {}) {
     body = `<div class="toggle2" style="--c:var(--diaper)">
       <button type="button" class="tbig" data-tog="wet" aria-pressed="${!!e.wet}" style="--c:var(--wet)">Wet<small>pee</small></button>
       <button type="button" class="tbig" data-tog="dirty" aria-pressed="${!!e.dirty}" style="--c:var(--dirty)">Dirty<small>poop</small></button></div>
-      <div class="meta">Tap one or both.</div>${fWhen('Time', at)}${fNote(e.note)}`;
+      <div class="meta">Tap one or both.</div>
+      <div class="fld"><span>Poop watery or very loose? <span class="hint">optional</span></span><div class="chips"><button type="button" class="chip" data-watery aria-pressed="${!!e.watery}" style="--c:var(--dirty)">Watery / loose</button></div></div>
+      ${fWhen('Time', at)}${fNote(e.note)}`;
   } else if (type === 'feed') {
     const m = e.method || prefill.method || lsGet('lastMethod') || 'bottle';
     body = `<div class="fld"><span>How was he fed?</span><div class="seg" role="group" style="display:grid" aria-label="Feeding method">
@@ -894,7 +1194,7 @@ function collect() {
   if (type !== 'visit' && at > Date.now() + 5 * MIN) return err("That time is in the future. Check the date and time.");
   const note = $('#f-note') ? $('#f-note').value.trim() : '';
   const d = {type, at}; if (note) d.note = note;
-  if (type === 'diaper') { d.wet = $('[data-tog="wet"]').getAttribute('aria-pressed') === 'true'; d.dirty = $('[data-tog="dirty"]').getAttribute('aria-pressed') === 'true'; if (!d.wet && !d.dirty) return err('Choose wet, dirty, or both.'); }
+  if (type === 'diaper') { d.wet = $('[data-tog="wet"]').getAttribute('aria-pressed') === 'true'; d.dirty = $('[data-tog="dirty"]').getAttribute('aria-pressed') === 'true'; if (!d.wet && !d.dirty) return err('Choose wet, dirty, or both.'); if (d.dirty && $('[data-watery]').getAttribute('aria-pressed') === 'true') d.watery = true; }
   else if (type === 'feed') {
     d.method = currentMethod(); lsSet('lastMethod', d.method);
     if (d.method === 'breast') { const m = num('f-min'); if (!(m > 0)) return err('Enter how many minutes he nursed.'); d.minutes = m; const s = $('[data-side][aria-pressed="true"]'); if (s) d.side = s.dataset.side; }
@@ -967,6 +1267,7 @@ function openSettings() {
         <div class="fld"><label for="s-name">Baby's name</label><input type="text" id="s-name" value="${esc(babyName())}" autocomplete="off"></div>
         <div class="fld"><label for="s-birth">Birth date</label><input type="date" id="s-birth" value="${esc(S.settings.birth || '')}"></div>
       </div>
+      <div class="fld"><span>Birth weight <span class="hint">used for the first-weeks weight check</span></span>${(() => { const bg = S.settings.birthGrams; if (U.wt === 'metric') return `<div class="numrow"><input id="s-bkg" type="number" inputmode="decimal" step="any" min="0" value="${bg ? r1(bg / 10) / 100 : ''}" aria-label="Birth weight in kilograms"><span class="unit">kg</span></div>`; const lb = bg ? Math.floor(bg / G_PER_OZ / 16) : '', oz = bg ? r1(bg / G_PER_OZ - lb * 16) : ''; return `<div class="two"><div class="numrow"><input id="s-blb" type="number" inputmode="numeric" min="0" step="1" value="${lb}" aria-label="Birth weight pounds"><span class="unit">lb</span></div><div class="numrow"><input id="s-boz" type="number" inputmode="decimal" min="0" step="any" value="${oz}" aria-label="Birth weight ounces"><span class="unit">oz</span></div></div>`; })()}</div>
       <div class="eyebrow" style="margin-top:4px">Units on this device</div>
       <div class="fld"><span>Milk amounts</span><div class="seg" role="group" style="display:grid">${[['oz','Ounces (oz)'],['ml','Milliliters (ml)']].map(([k, l]) => `<button type="button" data-unit-vol="${k}" aria-pressed="${U.vol === k}">${l}</button>`).join('')}</div></div>
       <div class="fld"><span>Weight and length</span><div class="seg" role="group" style="display:grid">${[['imperial','lb · in'],['metric','kg · cm']].map(([k, l]) => `<button type="button" data-unit-wt="${k}" aria-pressed="${U.wt === k}">${l}</button>`).join('')}</div></div>
@@ -979,11 +1280,16 @@ function openSettings() {
 }
 async function saveSettings() {
   const vol = $('[data-unit-vol][aria-pressed="true"]').dataset.unitVol, wt = $('[data-unit-wt][aria-pressed="true"]').dataset.unitWt;
+  let bg = null;
+  if ($('#s-bkg')) { const kg = num('s-bkg'); if (kg > 0) bg = Math.round(kg * 1000); }
+  else { const lb = num('s-blb') || 0, oz = num('s-boz') || 0; if (lb * 16 + oz > 0) bg = Math.round((lb * 16 + oz) * G_PER_OZ); }
+  if (bg != null && (bg < 500 || bg > 7000)) { const e = $('#formErr'); e.textContent = 'That birth weight looks off. Check the numbers.'; e.hidden = false; return; }
   U.vol = vol; U.wt = wt; lsSet('vol', vol); lsSet('wt', wt);
   const who = $('#s-who').value.trim(); if (who) { S.me = who; lsSet('who', who); }
   const name = $('#s-name').value.trim() || 'Baby', birth = $('#s-birth').value || '';
-  if (name !== (S.settings.name || 'Baby') || birth !== (S.settings.birth || '')) {
-    if (!(await write(() => store.set('settings/main', {name, birth})))) { render(); return; }
+  if (name !== (S.settings.name || 'Baby') || birth !== (S.settings.birth || '') || bg !== (S.settings.birthGrams ?? null)) {
+    const next = {...S.settings, name, birth}; if (bg) next.birthGrams = bg; else delete next.birthGrams;
+    if (!(await write(() => store.set('settings/main', next)))) { render(); return; }
   }
   closeSheet(); toast('Settings saved'); render();
 }
@@ -1008,7 +1314,7 @@ document.addEventListener('click', async ev => {
   if (ds.view) { location.hash = ds.view; return; }
   if (ds.goto) { location.hash = ds.goto; return; }
   if ('close' in ds) { closeSheet(); return; }
-  if (b.id === 'btnSettings') { openSettings(); return; }
+  if (b.id === 'btnSettings' || 'opensettings' in ds) { openSettings(); return; }
   if (b.id === 'btnSignOut') { closeSheet(); if (sb) await sb.auth.signOut(); showGate(); return; }
   if (ds.add) { openForm(ds.add); return; }
   if (ds.edit) { const e = findByPath(ds.edit); if (e) openForm(e.type, e); return; }
@@ -1021,6 +1327,7 @@ document.addEventListener('click', async ev => {
   if (ds.starttimer) { startTimer(ds.starttimer); return; }
   if (ds.discard) { if (await clearTimer(ds.discard)) { closeSheet(); toast('Timer discarded'); render(); } return; }
   if (ds.size) { $$('[data-size]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); return; }
+  if ('watery' in ds) { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (on) $('[data-tog="dirty"]').setAttribute('aria-pressed', 'true'); return; }
   if ('forceful' in ds) { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); return; }
   if (ds.tog) { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); return; }
   if (ds.method) { $$('[data-method]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); const br = ds.method === 'breast'; $('#breastFields').hidden = !br; $('#volFields').hidden = br; const l = $('label[for="f-at"]'); if (l) l.textContent = br ? 'Started at' : 'Time'; updateMethodHint(); return; }
@@ -1049,6 +1356,7 @@ document.addEventListener('submit', ev => {
     updateVisit(next, [...(next.questions || []), {text, done: false}]).then(ok => { if (ok) { inp.value = ''; } });
   }
 });
+document.addEventListener('toggle', ev => { const d = ev.target; if (d.dataset && d.dataset.hk) { S.hcOpen = S.hcOpen || new Set(); d.open ? S.hcOpen.add(d.dataset.hk) : S.hcOpen.delete(d.dataset.hk); } }, true);
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && sheetCtx) closeSheet(); });
 
 /* light ticking: refresh "ago" labels and timers without writing anything */
@@ -1068,15 +1376,21 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { ro
 function seedPreview(st) {
   const now = Date.now(); const today = sod(now);
   const put = (p, d) => st.docs.set(p, d);
-  put('settings/main', {name: 'Sample baby', birth: (() => { const d = new Date(addDays(today, -44)); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })()});
+  /* localhost test switches: ?demo&age=20&feed=breast|formula|mixed&noweight&nobirth&few */
+  const q = new URLSearchParams(location.search), AGE = q.has('age') ? +q.get('age') : 44, FEED = q.get('feed') || 'mixed';
+  const bd = new Date(addDays(today, -AGE));
+  if (!q.has('nobirth')) put('settings/main', {name: 'Sample baby', birth: `${bd.getFullYear()}-${pad(bd.getMonth() + 1)}-${pad(bd.getDate())}`, birthGrams: 3430});
+  if (q.has('few')) { put(`m/${monthKey(now)}/events/only`, {type:'diaper', at:now - 50 * MIN, loggedAt:now - 49 * MIN, by:null, wet:true, dirty:true}); return; }
+  const wAt = a => a < 14 ? 3430 * (1 - Math.min(a, 4) * 0.0175 + Math.max(0, a - 5) * 0.011) : gAtZ(zOf(3430, 0) - 0.1, a);
   let rnd = 7; const R = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
-  for (let day = -9; day <= 0; day++) {
-    const d0 = addDays(today, day);
+  for (let day = Math.max(-9, -AGE); day <= 0; day++) {
+    const d0 = addDays(today, day), ageD = AGE + day;
     let t = d0 + 30 * MIN + R() * 40 * MIN, i = 0;
+    const perFeedMl = 2.5 * ML_PER_OZ * wAt(ageD) / 453.592 / 8.5;
     while (t < d0 + DAY && t < now - 20 * MIN) {
-      const method = i % 3 === 0 ? 'breast' : i % 3 === 1 ? 'bottle' : 'formula';
+      const method = FEED === 'mixed' ? (i % 3 === 0 ? 'breast' : i % 3 === 1 ? 'bottle' : 'formula') : FEED;
       const feed = {type:'feed', at:t, loggedAt:t + 4 * MIN, by:null, method};
-      if (method === 'breast') { feed.minutes = Math.round(12 + R() * 14); feed.side = ['L','R','B'][i % 3]; } else feed.ml = Math.round((2.5 + R() * 1.8) * 2) / 2 * ML_PER_OZ;
+      if (method === 'breast') { feed.minutes = Math.round(12 + R() * 14); feed.side = ['L','R','B'][i % 3]; } else feed.ml = Math.round(perFeedMl * (0.85 + R() * 0.3));
       put(`m/${monthKey(feed.loggedAt)}/events/f${day}-${i}`, feed);
       const dt = t + 25 * MIN; if (dt < now) put(`m/${monthKey(dt)}/events/d${day}-${i}`, {type:'diaper', at:dt, loggedAt:dt + MIN, by:null, wet:true, dirty:R() < 0.38});
       const night = new Date(t).getHours() >= 21 || new Date(t).getHours() < 5;
@@ -1088,9 +1402,14 @@ function seedPreview(st) {
       t += (night ? 3.6 : 2.6) * HOUR + R() * 50 * MIN; i++;
     }
   }
-  put('growth/g1', {at:addDays(today, -44) + 10 * HOUR, loggedAt:addDays(today, -44) + 10 * HOUR, by:null, grams:3430, cm:51, headCm:34.5});
-  put('growth/g2', {at:addDays(today, -30) + 10 * HOUR, loggedAt:addDays(today, -30) + 11 * HOUR, by:null, grams:3880, cm:53.3});
-  put('growth/g3', {at:addDays(today, -3) + 10 * HOUR, loggedAt:addDays(today, -3) + 11 * HOUR, by:null, grams:4720, cm:56.1, headCm:38.2});
+  if (!q.has('noweight')) [AGE, AGE - 14, AGE - 30, 3].filter((a, i, xs) => a >= 0 && a <= AGE && xs.indexOf(a) === i).forEach((ago, k) => {
+    const a = AGE - ago; put(`growth/g${k}`, {at:addDays(today, -ago) + 10 * HOUR, loggedAt:addDays(today, -ago) + 11 * HOUR, by:null, grams:Math.round(wAt(a) * (q.has('sick') && ago === 3 ? 0.9 : 1))});
+  });
+  if (q.has('sick')) for (const [p, d] of [...st.docs]) {
+    if (!p.startsWith('m/') || d.at < now - DAY) continue;
+    if (d.type === 'diaper') { if (d.at > now - 9 * HOUR) d.wet = false, d.dirty = true; if (d.dirty) d.watery = true; }
+    if (d.type === 'spitup') { d.forceful = true; d.size = 'L'; }
+  }
   put('visits/v1', {at:addDays(today, -30) + 10 * HOUR, loggedAt:addDays(today, -31) + 20 * HOUR, by:null, place:'2-week checkup', notes:'Back above birth weight. Vitamin D drops daily.', questions:[{text:'Is spit-up after bottles normal?', done:true}]});
   put('visits/v2', {at:addDays(today, 6) + 10.5 * HOUR, loggedAt:now - 2 * DAY, by:null, place:'2-month checkup', notes:'', questions:[{text:'When should we expect a longer night stretch?', done:false}, {text:'How much formula per bottle at this age?', done:false}, {text:'Vaccine schedule for this visit', done:false}]});
 }
