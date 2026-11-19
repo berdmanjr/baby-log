@@ -775,6 +775,9 @@ const HC_SOURCES = [
   ['AAP: Diarrhea (0–12 months)', 'https://www.healthychildren.org/English/tips-tools/symptom-checker/Pages/symptomviewer.aspx?symptom=Diarrhea+(0-12+Months)'],
   ['AAP: Spitting up (reflux)', 'https://www.healthychildren.org/English/tips-tools/symptom-checker/Pages/symptomviewer.aspx?symptom=Spitting+Up+-+Reflux'],
   ['AAP: Signs of dehydration', 'https://www.healthychildren.org/English/health-issues/injuries-emergencies/Pages/dehydration.aspx'],
+  ['AAP: Is your breastfed baby getting enough milk? (lose no more than 8–10%)', 'https://www.healthychildren.org/English/ages-stages/baby/breastfeeding/Pages/How-to-Tell-if-Baby-is-Getting-Enough-Milk.aspx'],
+  ['AAP: First office visit (more than 10% loss needs evaluation)', 'https://www.aap.org/en/patient-care/newborn-infant-and-early-childhood-nutrition/newborn-and-infant-health-assessment-and-promotion/first-office-visit-3-5-days/'],
+  ['CDC: Newborn breastfeeding basics (weight loss after day 5)', 'https://www.cdc.gov/infant-toddler-nutrition/breastfeeding/newborn-basics.html'],
   ['AAP: First month growth (back to birth weight by ~2 weeks)', 'https://www.healthychildren.org/English/ages-stages/baby/Pages/First-Month-Physical-Appearance-and-Growth.aspx'],
   ['AAP: Back to sleep, tummy to play', 'https://www.healthychildren.org/English/ages-stages/baby/sleep/Pages/back-to-sleep-tummy-to-play.aspx'],
   ['WHO: Weight-for-age standards (percentiles)', 'https://www.who.int/tools/child-growth-standards/standards/weight-for-age'],
@@ -801,6 +804,12 @@ function healthCheck() {
   const ev = allEvents(); const first = ev.length ? ev[0].at : null;
   const loggedH = first == null ? 0 : (now - first) / HOUR;
   const full24 = loggedH >= 24;
+  /* Longest stretch of the last 24 h with nothing logged (a logged sleep counts as covered; pumping doesn't). */
+  const win0 = now - DAY, spans = [];
+  for (const e of ev) { if (e.type === 'pump') continue; const en = e.type === 'sleep' ? e.at + (e.minutes || 0) * MIN : e.at; if (en >= win0 && e.at <= now) spans.push([Math.max(e.at, win0), Math.min(en, now)]); }
+  spans.sort((a, b) => a[0] - b[0]);
+  let cur = win0, hole = 0; for (const [a, b] of spans) { if (a > cur) hole = Math.max(hole, a - cur); cur = Math.max(cur, b); } hole = Math.max(hole, now - cur);
+  const counted = full24 && hole <= (A < 122 ? 6 : 10) * HOUR;  // only colour counts when the day looks fully logged
   const st = rangeStats(now - DAY, now);
   const prior = []; for (let i = 1; i <= 7; i++) { const a = now - (i + 1) * DAY; if (first != null && a >= first) prior.push(rangeStats(a, a + DAY)); }
   const pAvg = f => prior.length >= 3 ? prior.reduce((s, x) => s + f(x), 0) / prior.length : null;
@@ -813,7 +822,7 @@ function healthCheck() {
   const est = estWeight(now, bt);
   const items = [];
   const add = (key, name, c, r) => items.push({key, name, c, ...r});
-  const notYet = `Needs a full day of logging${first ? ` (you started ${fmtAgo(first)})` : ''}.`;
+  const notYet = !full24 ? `Needs a full day of logging${first ? ` (you started ${fmtAgo(first)})` : ''}.` : `There's a ${fmtDur(hole / MIN)} stretch with nothing logged, so the counts may be short.`;
   const worst = rs => rs.reduce((a, r) => LV[r.lvl] >= LV[a.lvl] ? r : a, {lvl: 'none'});  // ties: the later, more specific reason wins
 
   /* Wet diapers: AAP looks for 6+ a day from day 5; no urine in 8+ hours is a dehydration sign. */
@@ -821,8 +830,12 @@ function healthCheck() {
     const val = full24 ? `${st.wet} in 24 h` : `${st.wet} so far`;
     const dry = lastWet ? (now - lastWet.at) / HOUR : loggedH;
     let r;
-    if (dry > 8 && loggedH > 8 && activeNow) r = {lvl:'alert', why:`No wet diaper logged in ${fmtDur(dry * 60)}.`, more:'AAP: no urine in more than 8 hours can mean dehydration, so call your pediatrician now. If you just missed logging one, log it and this clears.'};
-    else if (!full24) r = {lvl:'none', why: notYet};
+    const wetFrom = lastWet ? lastWet.at : first;
+    const dryChange = ev.some(e => e.type === 'diaper' && !e.wet && e.at >= wetFrom + 8 * HOUR && e.at <= now + MIN);  // a diaper changed 8+ h later and it was dry
+    const fedSince = ev.some(e => e.type === 'feed' && e.at > wetFrom + HOUR && e.at <= now + MIN);
+    if (dry > 8 && loggedH > 8 && dryChange) r = {lvl:'alert', why:`No wet diaper in ${fmtDur(dry * 60)}.`, more:'AAP: no urine in more than 8 hours can mean dehydration, so call your pediatrician now. If you just missed logging a wet one, log it and this clears.'};
+    else if (dry > 8 && loggedH > 8 && fedSince && activeNow) r = {lvl:'watch', why:`No wet diaper logged in ${fmtDur(dry * 60)}. Check his diaper.`, more:'If he really has not peed in more than 8 hours, AAP says to call your pediatrician now (it can mean dehydration). After a long sleep, a change usually settles it.'};
+    else if (!counted) r = {lvl:'none', why: notYet};
     else if (A < 4) { const need = Math.min(3, Math.floor(A) + 1); r = st.wet >= need ? {lvl:'ok', why:'Normal for the first days.'} : {lvl:'watch', why:`Fewer than ${need} in the last day.`}; r.more = 'While milk comes in (first 4 days), fewer wet diapers are normal; AAP says 3 a day can be normal. From day 5, look for 6 or more.'; }
     else if (st.wet >= 6) r = {lvl:'ok', why:'6 or more a day is what AAP looks for.'};
     else if (st.wet >= 4) r = {lvl:'watch', why:'Below the 6 a day AAP looks for.', more:'Double-check every diaper got logged. If it really is under 6 a day, AAP says to call your pediatrician within 24 hours.'};
@@ -837,19 +850,20 @@ function healthCheck() {
     const covered = h => loggedH >= h;
     if (dol === 1) rs.push({lvl:'info', why:'First day. Poops pick up from day 2.'});
     else if (dol <= 4) {
-      if (noStoolH > 24 && covered(24)) rs.push({lvl:'alert', why:'No poop in over 24 hours on day 2–4.', more:'AAP: on days 2–4, no stool in more than 24 hours means call your pediatrician within 24 hours.'});
+      if (!counted) rs.push({lvl:'none', why: notYet});
+      else if (noStoolH > 24) rs.push({lvl:'alert', why:'No poop in over 24 hours on day 2–4.', more:'AAP: on days 2–4, no stool in more than 24 hours means call your pediatrician within 24 hours.'});
       else rs.push({lvl:'ok', why:'Days 2–3 usually bring 1–2 a day, rising to 3+ by day 5.'});
     } else if (!formula && A < 28) {
-      if (!full24) rs.push({lvl:'none', why: notYet});
+      if (!counted) rs.push({lvl:'none', why: notYet});
       else if (st.dirty >= 3) rs.push({lvl:'ok', why:'3 or more a day is what AAP looks for in the first month.'});
       else if (st.dirty === 2) rs.push({lvl:'watch', why:'Below the 3 a day AAP looks for in the first month.', more:'For breast-milk-fed babies, AAP uses poops as the best sign of how much milk he is getting. Under 3 a day (after day 5) means call your pediatrician within 24 hours if it continues.'});
       else rs.push({lvl:'alert', why:`Only ${st.dirty} in the last day.`, more:'AAP: in the first month, fewer than 3 poops a day (after day 5) means call your pediatrician within 24 hours. Stool count is the best sign of how much breast milk he is getting.'});
-    } else if (!full24) rs.push({lvl:'none', why: notYet});
+    } else if (!counted) rs.push({lvl:'none', why: notYet});
     else if (!formula) {
       if (noStoolH > 7 * 24 && covered(7 * 24)) rs.push({lvl:'watch', why:`No poop in ${Math.floor(noStoolH / 24)} days.`, more:'AAP: after 4–8 weeks some breastfed babies go 4–7 days between poops, which is fine if they are soft and passed without pain. Longer than that, check with your pediatrician.'});
       else rs.push({lvl:'ok', why:'After a month, breastfed babies can go days between poops.', more:'AAP: some breastfed babies switch to one large soft poop every 4–7 days. That is normal if he is feeding well and not straining in pain.'});
     } else if (A < 61) {
-      if (!full24) rs.push({lvl:'none', why: notYet});
+      if (!counted) rs.push({lvl:'none', why: notYet});
       else if (st.dirty >= 1) rs.push({lvl:'ok', why:'Formula-fed babies usually go 1–4 times a day until 2 months.'});
       else rs.push({lvl:'watch', why:'No poop in the last day.', more:'AAP: formula-fed babies usually poop 1–4 times a day until 2 months. One quiet day is not an emergency, but watch for hard stools or straining.'});
     } else {
@@ -862,7 +876,7 @@ function healthCheck() {
     else if (W >= 6) rs.push({lvl:'alert', why:`${W} watery poops in 24 h.`, more:'AAP: 6 or more watery stools in 24 hours, call your pediatrician within 24 hours.'});
     else if (W >= 3) rs.push({lvl:'watch', why:`${W} watery poops in 24 h counts as diarrhea.`, more:'AAP defines diarrhea as 3 or more watery or very loose stools. Watch wet diapers closely; call at 6 or more watery stools in 24 hours.'});
     const pd = pAvg(x => x.dirty);
-    if (full24 && pd != null && W < 3 && st.dirty >= 2 * pd && st.dirty >= pd + 3) rs.push({lvl:'watch', why:`More than his usual (about ${fmtN(pd)} a day).`, more:'AAP describes diarrhea as a sudden jump in how many poops there are and how loose they are. If these are watery, tap "Watery / loose" when you log them so this check can tell.'});
+    if (counted && pd != null && W < 3 && st.dirty >= 2 * pd && st.dirty >= pd + 3) rs.push({lvl:'watch', why:`More than his usual (about ${fmtN(pd)} a day).`, more:'AAP describes diarrhea as a sudden jump in how many poops there are and how loose they are. If these are watery, tap "Watery / loose" when you log them so this check can tell.'});
     const r = worst(rs); const moreAll = rs.filter(x => x.more && x !== r).map(x => x.more);
     add('dirty', 'Dirty diapers', '--dirty', {val: full24 ? `${st.dirty} in 24 h${W ? ` · ${W} watery` : ''}` : `${st.dirty} so far`, ...r, more: [r.more, ...moreAll].filter(Boolean).join(' ')});
   }
@@ -871,7 +885,7 @@ function healthCheck() {
   {
     const val = full24 ? `${st.feeds} in 24 h${st.avgInterval ? ` · every ${fmtDur(st.avgInterval)}` : ''}` : `${st.feeds} so far`;
     let r;
-    if (!full24) r = {lvl:'none', why: notYet};
+    if (!counted) r = {lvl:'none', why: notYet};
     else if (A < 28 && !formula) r = st.feeds < 8 ? {lvl:'watch', why:'Below the 8–12 a day AAP expects in the first month.', more:'Breastfed newborns usually nurse 8–12 times in 24 hours. Fewer can mean he is not getting enough; watch his wet and dirty diapers.'}
       : st.feeds > 12 ? {lvl:'watch', why:'More than the usual 8–12 a day.', more:'Often cluster feeding or a growth spurt. It is fine if wet and dirty diapers and weight gain look good.'}
       : {lvl:'ok', why:'Within the 8–12 a day AAP expects in the first month.'};
@@ -892,7 +906,8 @@ function healthCheck() {
       if (!worstGap || over > worstGap.over) worstGap = {s, len, lim, over, open: i + 1 === pts.length};
     }
     let r;
-    if (!worstGap) r = {lvl:'none', why:'No feeds logged in the last day.'};
+    if (!counted) r = {lvl:'none', why: notYet};
+    else if (!worstGap) r = {lvl:'none', why:'No feeds logged in the last day.'};
     else if (worstGap.len > 8) r = {lvl:'alert', why:`${fmtDur(worstGap.len * 60)} without a logged feed.`, more:'AAP: a newborn who will not feed, or takes very little, for more than 8 hours needs a call to your pediatrician now. If he did eat and it just was not logged, log it and this clears.'};
     else if (worstGap.over > 0) r = {lvl:'watch', why:`${worstGap.open ? 'It has been' : 'One stretch was'} ${fmtDur(worstGap.len * 60)}${worstGap.open ? ' since his last feed' : ` (from ${fmtTime(worstGap.s)})`}.`, more:`AAP: in the first month, wake him to feed if more than 3 hours pass during the day or 4 hours at night. This stretch started ${worstGap.lim === 3 ? 'during the day' : 'at night'}.`};
     else r = {lvl:'ok', why:'No stretch longer than AAP\'s 3 h (day) or 4 h (night) limit.'};
@@ -906,12 +921,12 @@ function healthCheck() {
     const val = st.intakeMl ? `${fmtVol(st.intakeMl)}${T && !st.breastFeeds && A < 183 ? ` · aim ~${fmtVol(T)}` : ''}` : '—';
     let r;
     if (!st.intakeMl && !st.feeds) r = {lvl:'none', why: full24 ? 'No feeds logged in the last day.' : notYet};
-    else if (st.intakeMl > 36 * ML_PER_OZ && full24) r = {lvl:'alert', why:'More than 36 oz in a day.', more:'AAP: it is rare for a baby to need more than 36 oz a day. Talk to your pediatrician; he may be getting more than he needs.'};
+    else if (st.intakeMl > 36 * ML_PER_OZ && counted) r = {lvl:'watch', why:'More than 36 oz in a day.', more:'AAP: it is rare for a baby to need more than 36 oz a day; if he keeps taking that much, bring it up with your pediatrician. He may be getting more than he needs.'};
     else if (st.breastFeeds) r = {lvl:'info', why:'He also breastfed, so the bottle total is not everything he ate.', more:'With breastfeeds in the mix, wet and dirty diapers and weight gain are the better check.'};
     else if (A < 4) r = {lvl:'info', why:'Amounts ramp up fast in the first days. Follow your pediatrician\'s plan.', more:'AAP: newborns usually take 1–2 oz per feed after the first day or two.'};
-    else if (A >= 183) r = st.intakeMl > 32 * ML_PER_OZ && full24 ? {lvl:'watch', why:'Above the 32 oz a day AAP sets as the usual most.'} : {lvl:'info', why:'After 6 months solids change how much milk he needs.', more:'AAP: around 6 months, typically 6–8 oz at each of 4–5 feeds, and usually no more than 32 oz a day.'};
+    else if (A >= 183) r = st.intakeMl > 32 * ML_PER_OZ && counted ? {lvl:'watch', why:'Above the 32 oz a day AAP sets as the usual most.'} : {lvl:'info', why:'After 6 months solids change how much milk he needs.', more:'AAP: around 6 months, typically 6–8 oz at each of 4–5 feeds, and usually no more than 32 oz a day.'};
     else if (!est || !est.g) r = {lvl:'none', why: est && est.stale ? 'Last weight is too old to set a target. Log a new weigh-in.' : 'Log his weight to get a daily target.'};
-    else if (!full24) r = {lvl:'none', why: notYet};
+    else if (!counted) r = {lvl:'none', why: notYet};
     else if (st.intakeMl > hi) r = {lvl:'watch', why:`Above about ${fmtVol(hi)} a day, so he may be getting more than he needs.`, more:`AAP: babies take about 2½ oz per pound a day (about ${fmtVol(T)} at ${fmtWeight(est.g)}), and usually no more than 32 oz. Signs of too much: lots of spit-up, fussiness after feeds, very fast weight gain.`};
     else if (st.intakeMl < lo) r = {lvl:'watch', why:`Below about ${fmtVol(lo)} a day.`, more:`AAP: babies take about 2½ oz per pound a day (about ${fmtVol(T)} at ${fmtWeight(est.g)}). A low day is fine if wet diapers and weight gain look good. The green band here is within about 20% of AAP's average.`};
     else r = {lvl:'ok', why:`Close to AAP's 2½ oz per pound a day (about ${fmtVol(T)}).`, more:`Green band: ${fmtVol(lo)}–${fmtVol(hi)}, within about 20% of AAP's average, capped at the 32 oz AAP sets as the usual most.`};
@@ -936,7 +951,7 @@ function healthCheck() {
       if (bg) {
         const loss = (bg - w.grams) / bg * 100;
         if (wa <= 14) {
-          if (loss > 10) rs.push({lvl:'alert', why:`Down ${fmtN(loss)}% from birth weight.`, more:'AAP: newborns should lose no more than 8–10% of birth weight in the first days, and more than 10% needs to be checked. Call your pediatrician.'});
+          if (loss > 10) rs.push({lvl:'alert', why:`Down ${fmtN(loss)}% from birth weight.`, more:'AAP: newborns should lose no more than 8–10% of birth weight in the first days, and a loss of more than 10% needs to be checked by a doctor. Call your pediatrician.'});
           else if (loss > 8) rs.push({lvl:'watch', why:`Down ${fmtN(loss)}% from birth weight.`, more:'AAP: newborns should lose no more than 8–10% of birth weight in the first days. Keep feeding often and recheck soon.'});
           else if (loss > 0) rs.push({lvl:'ok', why:`Down ${fmtN(loss)}% from birth weight, inside the usual dip.`, more:'All newborns lose some weight in the first week and are usually back to birth weight by about 2 weeks.'});
           else rs.push({lvl:'ok', why: wa < 2 ? 'At birth weight.' : 'Back to birth weight or above.'});
@@ -949,7 +964,7 @@ function healthCheck() {
       if (prevW) {
         const pa = (prevW.at - bt) / DAY, span = (w.at - prevW.at) / DAY, gpd = (w.grams - prevW.grams) / span;
         gainTxt = fmtGain(gpd);
-        const inDip = pa >= 1 && pa < 14;
+        const inDip = pa < 14;  // gain measured from inside the newborn dip (birth included) isn't comparable; birth-weight rules cover it
         if (!inDip) {
           const mid = (pa + wa) / 2, row = WVEL.find(r => mid < r[1]) || WVEL[WVEL.length - 1], len = row[1] - row[0];
           const p5 = row[2] / len, p15 = row[3] / len, p95 = row[4] / len, sure = span >= 21;
@@ -976,7 +991,7 @@ function healthCheck() {
     if (st.spitL) rs.push({lvl:'watch', why:`${st.spitL} large spit-up${st.spitL === 1 ? '' : 's'} (more than a tablespoon).`, more:'AAP calls 1–2 mouthfuls normal. Big ones are worth watching, especially with fussiness, frequent crying or slow weight gain.'});
     const pa = pAvg(x => x.spitups);
     if (pa != null && st.spitups >= 2 * pa && st.spitups >= pa + 3) rs.push({lvl:'watch', why:`More than his usual (about ${fmtN(pa)} a day).`, more:'AAP: spitting up that keeps getting worse is worth raising with your pediatrician.'});
-    if (!rs.length) rs.push(full24 || st.spitups ? {lvl:'ok', why: st.spitups ? 'Normal amounts. About half of babies spit up.' : 'None logged.', more:'AAP: spit-up of 1–2 mouthfuls is normal and usually eases by about 7 months. Call right away for green or bloody spit-up.'} : {lvl:'none', why: notYet});
+    if (!rs.length) rs.push(counted || st.spitups ? {lvl:'ok', why: st.spitups ? 'Normal amounts. About half of babies spit up.' : 'None logged.', more:'AAP: spit-up of 1–2 mouthfuls is normal and usually eases by about 7 months. Call right away for green or bloody spit-up.'} : {lvl:'none', why: notYet});
     const r = worst(rs);
     add('spit', 'Spit-up', '--spitup', {val: `${st.spitups}${full24 ? ' in 24 h' : ' so far'}${st.spitL ? ` · ${st.spitL} large` : ''}`, ...r, more: [r.more, ...rs.filter(x => x !== r).map(x => x.why)].filter(Boolean).join(' ')});
   }
@@ -1000,7 +1015,7 @@ function healthCheck() {
     else t = tm >= 15 ? {lvl:'ok', why:'At least the 15–30 min a day AAP suggests by 7 weeks.'} : {lvl:'watch', why:'Under the 15–30 min a day AAP suggests by 7 weeks.', more:'Short sessions add up. Always with an awake adult watching.'};
     add('tummy', 'Tummy time', '--tummy', {val: n ? `${fmtDur(tm)} · ${fmtN(ts)}×/day` : '—', ...t, more: (t.more ? t.more + ' ' : '') + `Average of the last ${n} full day${n === 1 ? '' : 's'}.`});
   }
-  return {items, A, est, full24, quiet: lastAny != null && now - lastAny > 6 * HOUR ? now - lastAny : null};
+  return {items, A, est, full24, counted, quiet: lastAny != null && now - lastAny > 6 * HOUR ? now - lastAny : null};
 }
 
 function healthHTML() {
@@ -1014,6 +1029,7 @@ function healthHTML() {
   const verdict = nA.length ? ['--alert', `Call your pediatrician about: ${nA.map(i => i.name.toLowerCase()).join(', ')}`]
     : nW.length ? ['--watch', `${nW.length} thing${nW.length === 1 ? '' : 's'} to keep an eye on${nO.length ? `, ${nO.length} on track` : ''}`]
     : !h.full24 ? ['--muted', 'Still building up a day of logs. Most checks fill in after 24 hours.']
+    : !h.counted ? ['--muted', 'Part of the last day has nothing logged, so the counts are left uncoloured.']
     : nO.length ? ['--ok', `Everything checked is on track`] : ['--muted', 'Not enough logged yet to check'];
   const ctx = [age(), h.est && h.est.g ? `weight ${h.est.projected ? 'about ' : ''}${fmtWeight(h.est.g)}` : 'no recent weight'].filter(Boolean).join(' · ');
   if (!S.hcOpen) S.hcOpen = new Set();
@@ -1380,6 +1396,10 @@ function seedPreview(st) {
   const q = new URLSearchParams(location.search), AGE = q.has('age') ? +q.get('age') : 44, FEED = q.get('feed') || 'mixed';
   const bd = new Date(addDays(today, -AGE));
   if (!q.has('nobirth')) put('settings/main', {name: 'Sample baby', birth: `${bd.getFullYear()}-${pad(bd.getMonth() + 1)}-${pad(bd.getDate())}`, birthGrams: 3430});
+  if (q.has('old1')) { put(`m/${monthKey(now - 30 * HOUR)}/events/only`, {type:'diaper', at:now - 30 * HOUR, loggedAt:now - 30 * HOUR, by:null, wet:true, dirty:true}); return; }
+  if (q.has('sparse')) { [30, 20, 9, 2].forEach((h, i) => put(`m/${monthKey(now - h * HOUR)}/events/x${i}`, {type: i % 2 ? 'feed' : 'diaper', at:now - h * HOUR, loggedAt:now - h * HOUR, by:null, wet:true, method:'formula', ml:120})); return; }
+  if (q.has('night')) { const w = now - 10 * HOUR; [[w - 14 * HOUR, 'feed'], [w - 12 * HOUR, 'diaper'], [w - 9 * HOUR, 'feed'], [w - 6 * HOUR, 'diaper'], [w - 3 * HOUR, 'feed'], [w, 'diaper'], [w + 15 * MIN, 'feed'], [now - 20 * MIN, 'feed']].forEach(([t, ty], i) => put(`m/${monthKey(t)}/events/n${i}`, {type:ty, at:t, loggedAt:t, by:null, wet:true, method:'formula', ml:180})); put(`m/${monthKey(w)}/events/nsleep`, {type:'sleep', at:w + 40 * MIN, loggedAt:now - 30 * MIN, by:null, minutes:Math.round((now - 40 * MIN - (w + 40 * MIN)) / MIN)}); return; }
+  if (q.has('dip')) { put('growth/b', {at:addDays(today, -AGE) + 9 * HOUR, loggedAt:addDays(today, -AGE) + 9 * HOUR, by:null, grams:3430}); put('growth/c', {at:addDays(today, -AGE + 22) + 9 * HOUR, loggedAt:addDays(today, -AGE + 22) + 9 * HOUR, by:null, grams:3600}); return; }
   if (q.has('few')) { put(`m/${monthKey(now)}/events/only`, {type:'diaper', at:now - 50 * MIN, loggedAt:now - 49 * MIN, by:null, wet:true, dirty:true}); return; }
   const wAt = a => a < 14 ? 3430 * (1 - Math.min(a, 4) * 0.0175 + Math.max(0, a - 5) * 0.011) : gAtZ(zOf(3430, 0) - 0.1, a);
   let rnd = 7; const R = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
@@ -1407,7 +1427,7 @@ function seedPreview(st) {
   });
   if (q.has('sick')) for (const [p, d] of [...st.docs]) {
     if (!p.startsWith('m/') || d.at < now - DAY) continue;
-    if (d.type === 'diaper') { if (d.at > now - 9 * HOUR) d.wet = false, d.dirty = true; if (d.dirty) d.watery = true; }
+    if (d.type === 'diaper') { if (d.at > now - 11 * HOUR) d.wet = false, d.dirty = true; if (d.dirty) d.watery = true; }
     if (d.type === 'spitup') { d.forceful = true; d.size = 'L'; }
   }
   put('visits/v1', {at:addDays(today, -30) + 10 * HOUR, loggedAt:addDays(today, -31) + 20 * HOUR, by:null, place:'2-week checkup', notes:'Back above birth weight. Vitamin D drops daily.', questions:[{text:'Is spit-up after bottles normal?', done:true}]});
